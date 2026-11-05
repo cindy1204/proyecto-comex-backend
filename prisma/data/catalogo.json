@@ -1,0 +1,543 @@
+{
+  "importaciones": {
+    "egresos": [
+      [
+        "2014",
+        "Importaciones pagadas con tarjeta en moneda legal colombiana",
+        "Pago de importaciones con tarjeta de crédito emitida en Colombia y cobrada en moneda legal, cuando se cumplen las condiciones del numeral."
+      ],
+      [
+        "2015",
+        "Giro de importación pagada hasta en un mes",
+        "Pago de bienes ya embarcados dentro de un mes, o con divisas o tarjeta cobrada en divisas según las condiciones del numeral."
+      ],
+      [
+        "2016",
+        "Gastos de importación o exportación incluidos en factura",
+        "Gastos adicionales de bienes, como fletes, seguros y comisiones, incluidos en la factura del proveedor o contrato."
+      ],
+      [
+        "2017",
+        "Pago anticipado de futuras importaciones",
+        "Pago antes de la fecha del documento de transporte, con recursos propios del importador residente o por usuarios de zona franca."
+      ],
+      [
+        "2022",
+        "Importaciones financiadas por proveedores u otros no residentes hasta 12 meses",
+        "Giro por bienes embarcados, financiados por proveedores u otros no residentes, con pago superior a un mes y hasta doce meses."
+      ],
+      [
+        "2023",
+        "Importaciones financiadas por IMC hasta 12 meses",
+        "Giro por bienes embarcados financiados por un intermediario del mercado cambiario, con pago superior a un mes y hasta doce meses."
+      ],
+      [
+        "2024",
+        "Importaciones financiadas por no residentes a más de 12 meses",
+        "Giro por bienes embarcados financiados por proveedores u otros no residentes, con pago superior a doce meses."
+      ],
+      [
+        "2025",
+        "Importaciones financiadas por IMC a más de 12 meses",
+        "Giro por bienes embarcados financiados por un intermediario del mercado cambiario, con pago superior a doce meses."
+      ],
+      [
+        "2026",
+        "Dación en pago de importaciones",
+        "Pago de importaciones de bienes mediante dación en pago; transmisión únicamente a través de un IMC."
+      ],
+      [
+        "2060",
+        "Pago de importación en moneda legal colombiana",
+        "Pago de importaciones de bienes o ingreso de mercancías a zona franca desde el resto del mundo a través de IMC."
+      ]
+    ]
+  },
+  "exportaciones": {
+    "ingresos": [
+      [
+        "1000",
+        "Reintegro por exportaciones de café",
+        "Ingreso de divisas por pago de exportaciones de café después del embarque."
+      ],
+      [
+        "1010",
+        "Reintegro por exportaciones de carbón",
+        "Ingreso de divisas por exportaciones de carbón, incluidos anticipos."
+      ],
+      [
+        "1020",
+        "Reintegro por exportaciones de ferroníquel",
+        "Ingreso de divisas por exportaciones de ferroníquel, incluidos anticipos."
+      ],
+      [
+        "1030",
+        "Reintegro por exportaciones de petróleo y derivados",
+        "Ingreso de divisas por exportaciones de petróleo y sus derivados, incluidos anticipos."
+      ],
+      [
+        "1040",
+        "Reintegro por otras exportaciones de bienes",
+        "Ingreso por exportación de bienes diferentes de café, carbón, ferroníquel, petróleo y derivados; incluye pagos en divisas o tarjeta."
+      ],
+      [
+        "1043",
+        "Reintegro de exportaciones financiadas a más de 12 meses",
+        "Ingreso por pago de exportaciones definitivas de bienes cuando el plazo supera doce meses."
+      ],
+      [
+        "1044",
+        "Dación en pago de exportaciones",
+        "Pago de exportaciones de bienes mediante dación en pago; transmisión únicamente a través de un IMC."
+      ],
+      [
+        "1045",
+        "Anticipo por exportaciones de café",
+        "Ingreso anticipado por exportaciones de café antes del embarque; no incluye prefinanciación."
+      ],
+      [
+        "1050",
+        "Anticipo por otras exportaciones de bienes",
+        "Ingreso anticipado por exportaciones distintas de café, carbón, ferroníquel, petróleo y derivados; no incluye prefinanciación."
+      ],
+      [
+        "1060",
+        "Pago de exportaciones en moneda legal colombiana",
+        "Pago de exportaciones de bienes efectuado a través de intermediarios del mercado cambiario."
+      ],
+      [
+        "1061",
+        "Pago de exportaciones en moneda legal con tarjeta",
+        "Pago de exportaciones en moneda legal colombiana con tarjeta de crédito."
+      ],
+      [
+        "1510",
+        "Gastos de exportación incluidos en la declaración definitiva",
+        "Ingreso de divisas para cubrir fletes, seguros, comisiones y otros gastos incluidos en la declaración definitiva."
+      ]
+    ]
+  },
+  "inversiones": {
+    "ingresos": [
+      [
+        "1310",
+        "Inversión suplementaria al capital asignado - petróleo",
+        "Ingreso para inversión suplementaria al capital asignado en exploración y explotación de petróleo."
+      ],
+      [
+        "1320",
+        "Inversión suplementaria - servicios de hidrocarburos",
+        "Ingreso para inversión suplementaria al capital asignado de servicios inherentes al sector de hidrocarburos."
+      ],
+      [
+        "1390",
+        "Inversión suplementaria - gas, carbón, ferroníquel y uranio",
+        "Ingreso para inversión suplementaria al capital asignado de estos sectores."
+      ],
+      [
+        "1590",
+        "Rendimientos de inversión colombiana directa en el exterior",
+        "Ingreso por utilidades, dividendos y otros rendimientos de inversión directa colombiana en el exterior."
+      ],
+      [
+        "1595",
+        "Rendimientos de inversión financiera en activos financieros",
+        "Ingreso por rendimientos de inversiones financieras en activos financieros en el exterior."
+      ],
+      [
+        "1598",
+        "Rendimientos de activos fijos en el exterior",
+        "Ingreso por alquiler de activos fijos ubicados en el exterior y de propiedad de residentes."
+      ],
+      [
+        "1599",
+        "Rendimientos de inversión financiera especial",
+        "Ingreso por rendimientos de la inversión financiera especial descrita en la regulación cambiaria."
+      ],
+      [
+        "4025",
+        "Inversión directa en sucursales de hidrocarburos y minería",
+        "Ingreso de capital extranjero al capital asignado de sucursales del régimen especial en estos sectores."
+      ],
+      [
+        "4026",
+        "Inversión directa extranjera en hidrocarburos y minería",
+        "Ingreso para inversión extranjera directa en sociedades nacionales de estos sectores."
+      ],
+      [
+        "4030",
+        "Inversión de portafolio de capitales del exterior",
+        "Ingreso de divisas para realizar inversiones de portafolio en Colombia."
+      ],
+      [
+        "4031",
+        "Programas sobre certificados de depósitos negociables",
+        "Ingreso relacionado con programas de certificados representativos de valores y adquisición de valores inscritos en el RNVE."
+      ],
+      [
+        "4032",
+        "Adquisición de participaciones en fondos de capital privado",
+        "Ingreso de capital extranjero destinado a adquirir participaciones en fondos de capital privado."
+      ],
+      [
+        "4035",
+        "Inversión directa extranjera en otros sectores",
+        "Ingreso para inversión directa extranjera en empresas y sucursales de sectores distintos de hidrocarburos y minería."
+      ],
+      [
+        "4036",
+        "Prima en colocación de aportes",
+        "Ingreso de divisas para pagar la prima en colocación de aportes."
+      ],
+      [
+        "4038",
+        "Inversión de portafolio en valores inscritos en RNVE",
+        "Ingreso para inversión de portafolio en valores de entidades extranjeras inscritos en el RNVE."
+      ],
+      [
+        "4040",
+        "Inversión suplementaria en otros sectores",
+        "Ingreso para inversión suplementaria al capital asignado en sectores diferentes de hidrocarburos y minería."
+      ],
+      [
+        "4055",
+        "Retorno de inversión colombiana directa en el exterior",
+        "Ingreso por liquidación, venta o disminución de inversión colombiana directa en el exterior."
+      ],
+      [
+        "4058",
+        "Redención de inversión financiera en activos financieros",
+        "Ingreso por liquidación, venta o disminución de inversiones financieras en títulos emitidos en el exterior."
+      ],
+      [
+        "4065",
+        "Redención de inversión financiera en activos fijos",
+        "Ingreso proveniente de la venta de activos fijos ubicados en el exterior."
+      ],
+      [
+        "4066",
+        "Redención de inversión financiera especial",
+        "Ingreso por venta o liquidación de inversión financiera especial."
+      ]
+    ],
+    "egresos": [
+      [
+        "2074",
+        "Utilidades y rendimientos de inversión directa extranjera",
+        "Egreso para remitir utilidades, dividendos u otros rendimientos de inversión directa de capitales del exterior."
+      ],
+      [
+        "4560",
+        "Retorno de inversión directa extranjera",
+        "Egreso por liquidación, venta o disminución de inversión directa extranjera; incluye ganancias por variación de precios."
+      ],
+      [
+        "4563",
+        "Retorno de participaciones en fondos de capital privado",
+        "Egreso por liquidación de participaciones en fondos de capital privado."
+      ],
+      [
+        "4565",
+        "Inversión extranjera no perfeccionada",
+        "Egreso por devolución de divisas cuando la inversión de capital extranjero en Colombia no se perfeccionó."
+      ],
+      [
+        "4635",
+        "Retorno de excedentes de inversión extranjera",
+        "Egreso para devolver excedentes originados por diferencias en cambio o variaciones en el valor de mercado."
+      ],
+      [
+        "4580",
+        "Inversión colombiana directa en el exterior",
+        "Egreso de divisas para efectuar inversión de capital directa en el exterior."
+      ],
+      [
+        "4581",
+        "Inversión colombiana con tarjeta cobrada en moneda legal",
+        "Inversión en empresas del exterior pagada con tarjeta emitida en Colombia y cobrada en moneda legal."
+      ],
+      [
+        "4582",
+        "Inversión colombiana en el exterior pagada en divisas",
+        "Inversión en empresas del exterior pagada con tarjeta cobrada en divisas."
+      ],
+      [
+        "4585",
+        "Inversión financiera en activos financieros en el exterior",
+        "Egreso para invertir en títulos, depósitos y otros activos financieros en el exterior."
+      ],
+      [
+        "4590",
+        "Compra de obligaciones en el exterior",
+        "Egreso para adquirir obligaciones privadas externas o deuda pública externa en los casos previstos por la regulación."
+      ],
+      [
+        "4570",
+        "Inversión financiera especial",
+        "Egreso para adquirir valores en sistemas de cotización extranjeros o valores inscritos en el RNVE, según la regulación."
+      ],
+      [
+        "4571",
+        "Retorno y rendimientos de inversión de portafolio extranjera",
+        "Egreso por liquidación de inversión extranjera de portafolio o remisión de rendimientos y dividendos."
+      ],
+      [
+        "4573",
+        "Inversión financiera en activos fijos en el exterior",
+        "Egreso para inversión financiera en activos fijos radicados en el exterior."
+      ]
+    ]
+  },
+  "endeudamiento": {
+    "ingresos": [
+      [
+        "1063",
+        "Pago de exportaciones en moneda legal financiadas a más de 12 meses",
+        "Ingreso por pago de exportaciones en moneda legal cuando la operación fue informada al Banco de la República."
+      ],
+      [
+        "1630",
+        "Intereses y comisiones de créditos activos",
+        "Ingreso por intereses y comisiones de créditos otorgados por residentes a no residentes."
+      ],
+      [
+        "1642",
+        "Ejecución de avales otorgados por no residentes",
+        "Ingreso por ejecución de avales y garantías otorgados por no residentes; aplica a los casos históricos señalados en el Anexo 3."
+      ],
+      [
+        "1645",
+        "Ejecución de avales o garantías a favor de residente",
+        "Ingreso de divisas por ejecución de avales o garantías a favor del beneficiario residente."
+      ],
+      [
+        "4000",
+        "Desembolso de deuda privada otorgada por IMC",
+        "Ingreso por desembolso de créditos en moneda extranjera otorgados por IMC a residentes."
+      ],
+      [
+        "4005",
+        "Desembolso de deuda privada otorgada por no residentes",
+        "Ingreso por desembolso de créditos en moneda extranjera otorgados por no residentes a residentes."
+      ],
+      [
+        "4006",
+        "Desembolso externo a IMC para operaciones activas en moneda legal",
+        "Ingreso por endeudamiento externo otorgado a IMC con este destino específico."
+      ],
+      [
+        "4018",
+        "Desembolso de prefinanciación de exportaciones",
+        "Ingreso por desembolso de créditos de prefinanciación de exportaciones."
+      ],
+      [
+        "4020",
+        "Amortización de créditos otorgados a no residentes",
+        "Ingreso por pago total o parcial de créditos activos en moneda extranjera otorgados por residentes a no residentes."
+      ],
+      [
+        "4021",
+        "Pago de créditos externos activos desembolsados en moneda legal",
+        "Ingreso de divisas para pago de créditos externos activos desembolsados en moneda legal."
+      ],
+      [
+        "4075",
+        "Desembolso de deuda pública a través de la DTN",
+        "Ingreso por desembolso de créditos de no residentes al Gobierno Nacional a través de la DTN."
+      ],
+      [
+        "4080",
+        "Desembolso de deuda pública otorgada por IMC",
+        "Ingreso por créditos otorgados por IMC a entidades del sector público."
+      ],
+      [
+        "4085",
+        "Desembolso de deuda pública otorgada por no residentes",
+        "Ingreso por créditos otorgados por no residentes a entidades del sector público."
+      ]
+    ],
+    "egresos": [
+      [
+        "2063",
+        "Pago de importaciones en moneda legal financiadas a más de 6 meses",
+        "Pago a través de IMC cuando la importación fue informada al Banco de la República."
+      ],
+      [
+        "2125",
+        "Intereses de deuda privada otorgada por IMC",
+        "Egreso por intereses corrientes o de mora de créditos en moneda extranjera otorgados por IMC a residentes."
+      ],
+      [
+        "2135",
+        "Intereses de deuda privada otorgada por no residentes",
+        "Egreso por intereses de créditos en moneda extranjera otorgados por proveedores u otros no residentes."
+      ],
+      [
+        "2136",
+        "Intereses por financiación de importaciones de proveedores",
+        "Egreso por intereses cuando la importación financiada no requiere ser informada al Banco de la República."
+      ],
+      [
+        "2137",
+        "Intereses por financiación de importaciones de deuda pública",
+        "Egreso por intereses cuando la importación financiada no requiere ser informada al Banco de la República."
+      ],
+      [
+        "2155",
+        "Intereses de deuda pública a través de la DTN",
+        "Egreso por intereses de créditos otorgados por no residentes al Gobierno Nacional a través de la DTN."
+      ],
+      [
+        "2165",
+        "Intereses de deuda pública otorgada por IMC",
+        "Egreso por intereses de créditos otorgados por IMC a entidades del sector público."
+      ],
+      [
+        "2175",
+        "Intereses de deuda pública otorgada por no residentes",
+        "Egreso por intereses de créditos otorgados por no residentes a entidades del sector público."
+      ],
+      [
+        "2185",
+        "Intereses de endeudamiento externo otorgado a IMC",
+        "Pago de intereses del endeudamiento externo destinado a operaciones activas en moneda legal."
+      ],
+      [
+        "2215",
+        "Intereses de deuda de la banca comercial",
+        "Egreso de intereses en moneda extranjera de establecimientos de crédito.",
+        "No utilizable por titulares de cuentas de compensación."
+      ],
+      [
+        "2230",
+        "Comisiones de deuda privada otorgada por IMC",
+        "Egreso por comisiones y otros gastos de créditos privados otorgados por IMC."
+      ],
+      [
+        "2240",
+        "Comisiones de deuda privada otorgada por no residentes",
+        "Egreso por comisiones y otros gastos de créditos privados otorgados por no residentes."
+      ],
+      [
+        "2247",
+        "Comisiones de endeudamiento externo otorgado a IMC",
+        "Egreso por comisiones y gastos de endeudamiento externo destinado a operaciones activas en moneda legal."
+      ],
+      [
+        "2250",
+        "Comisiones de deuda pública otorgada por IMC",
+        "Egreso por comisiones y gastos de créditos públicos otorgados por IMC."
+      ],
+      [
+        "2260",
+        "Comisiones de deuda pública otorgada por no residentes",
+        "Egreso por comisiones y otros gastos de créditos públicos otorgados por no residentes."
+      ],
+      [
+        "2612",
+        "Restitución de avales - seriedad de oferta",
+        "Egreso por restitución de avales para seriedad de oferta y cumplimiento; aplica a avales ejecutados hasta el 25 de mayo de 2018."
+      ],
+      [
+        "2613",
+        "Restitución de avales por contratos de exportación",
+        "Egreso por restitución de avales relacionados con contratos de exportación; aplica a casos ejecutados hasta el 25 de mayo de 2018."
+      ],
+      [
+        "2614",
+        "Restitución de avales por obligaciones de no residentes",
+        "Egreso por restitución de avales; aplica a casos ejecutados hasta el 25 de mayo de 2018."
+      ],
+      [
+        "2615",
+        "Restitución de avales por compra de petróleo o gas",
+        "Egreso por restitución de avales en los casos históricos descritos en el Anexo 3."
+      ],
+      [
+        "2616",
+        "Restitución de avales y garantías en moneda extranjera",
+        "Egreso por restitución de avales informados y ejecutados hasta el 25 de mayo de 2018."
+      ],
+      [
+        "2619",
+        "Ejecución de avales o garantías",
+        "Egreso de divisas por la ejecución de avales o garantías."
+      ],
+      [
+        "2620",
+        "Intereses y comisiones de avales y garantías",
+        "Egreso por intereses y comisiones de avales otorgados por no residentes; aplica a casos históricos indicados en el Anexo 3."
+      ],
+      [
+        "4500",
+        "Amortización de deuda privada otorgada por IMC",
+        "Egreso para pago total o parcial del capital de créditos privados otorgados por IMC."
+      ],
+      [
+        "4501",
+        "Prepago de deuda privada otorgada por IMC",
+        "Egreso por pago anticipado total o parcial del capital de créditos privados otorgados por IMC."
+      ],
+      [
+        "4505",
+        "Amortización de deuda privada otorgada por no residentes",
+        "Egreso para pago total o parcial del capital de créditos privados otorgados por no residentes."
+      ],
+      [
+        "4506",
+        "Prepago de deuda privada otorgada por no residentes",
+        "Egreso por pago anticipado total o parcial del capital de créditos privados otorgados por no residentes."
+      ],
+      [
+        "4507",
+        "Amortización de endeudamiento externo otorgado a IMC",
+        "Egreso para pago de capital destinado a operaciones activas en moneda legal."
+      ],
+      [
+        "4508",
+        "Prepago de endeudamiento externo otorgado a IMC",
+        "Egreso por prepago de capital destinado a operaciones activas en moneda legal."
+      ],
+      [
+        "4520",
+        "Desembolso de créditos otorgados por residentes a no residentes",
+        "Egreso de divisas por otorgamiento de créditos activos en moneda extranjera."
+      ],
+      [
+        "4525",
+        "Amortización de créditos de prefinanciación de exportaciones",
+        "Egreso por amortización de créditos de prefinanciación de exportaciones."
+      ],
+      [
+        "4605",
+        "Amortización de deuda pública a través de la DTN",
+        "Egreso por pago de capital de créditos públicos otorgados por no residentes al Gobierno Nacional a través de la DTN."
+      ],
+      [
+        "4610",
+        "Prepago de deuda pública a través de la DTN",
+        "Egreso anticipado de capital de créditos públicos otorgados por no residentes al Gobierno Nacional a través de la DTN."
+      ],
+      [
+        "4615",
+        "Amortización de deuda pública otorgada por IMC",
+        "Egreso para pago de capital de créditos públicos otorgados por IMC a entidades del sector público."
+      ],
+      [
+        "4616",
+        "Prepago de deuda pública otorgada por IMC",
+        "Egreso anticipado de capital de créditos públicos otorgados por IMC a entidades del sector público."
+      ],
+      [
+        "4625",
+        "Amortización de deuda pública otorgada por no residentes",
+        "Egreso para pago de capital de créditos públicos de no residentes a entidades públicas."
+      ],
+      [
+        "4626",
+        "Prepago de deuda pública otorgada por no residentes",
+        "Egreso anticipado de capital de créditos públicos de no residentes a entidades públicas."
+      ]
+    ]
+  }
+}

@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN @map("admin")
+  USER  @map("user")
+}
+
+enum CatalogDirection {
+  INGRESOS
+  EGRESOS
+}
+
+model User {
+  id              String           @id @default(cuid())
+  name            String
+  email           String           @unique
+  passwordHash    String           @map("password_hash")
+  role            UserRole         @default(USER)
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  interactions    Interaction[]
+  contactRequests ContactRequest[]
+
+  @@map("usuarios")
+}
+
+model CatalogItem {
+  id           String           @id @default(cuid())
+  category     String
+  direction    CatalogDirection
+  code         String
+  title        String
+  description  String           @db.Text
+  note         String?          @db.Text
+  active       Boolean          @default(true)
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+  interactions Interaction[]
+
+  @@unique([category, direction, code])
+  @@index([category, direction, active])
+  @@map("elementos_catalogo")
+}
+
+model Interaction {
+  id            String      @id @default(cuid())
+  userId        String      @map("user_id")
+  catalogItemId String      @map("catalog_item_id")
+  type          String
+  data          Json
+  createdAt     DateTime    @default(now()) @map("created_at")
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  catalogItem   CatalogItem @relation(fields: [catalogItemId], references: [id], onDelete: Restrict)
+
+  @@index([userId, createdAt])
+  @@index([catalogItemId])
+  @@map("interacciones")
+}
+
+model ContactRequest {
+  id             String   @id @default(cuid())
+  userId         String?  @map("user_id")
+  nombreCompleto String   @map("nombre_completo") @db.VarChar(120)
+  email          String   @db.VarChar(254)
+  empresa        String?  @db.VarChar(160)
+  telefono       String?  @db.VarChar(40)
+  tipoProducto   String   @map("tipo_producto") @db.VarChar(40)
+  respuestas     Json
+  createdAt      DateTime @default(now()) @map("created_at")
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([tipoProducto, createdAt])
+  @@index([userId, createdAt])
+  @@map("solicitudes_contacto")
+}
