@@ -1,4 +1,4 @@
-import type { CatalogFilter, CatalogItemInput, CatalogRepository } from '../domain/catalog.js';
+import type { CatalogFilter, CatalogItemInput, CatalogItemUpdate, CatalogRepository } from '../domain/catalog.js';
 import { ApplicationError } from '../domain/errors.js';
 
 export class CatalogService {
@@ -20,6 +20,12 @@ export class CatalogService {
 
   update(id: string, item: Partial<CatalogItemInput>) {
     return this.catalog.update(id, item);
+  }
+
+  async setImage(id: string, imageUrl: string) {
+    const item = await this.catalog.findById(id);
+    if (!item) throw new ApplicationError(404, 'NOT_FOUND', 'El numeral no existe.');
+    return this.catalog.update(id, { imageUrl } satisfies CatalogItemUpdate);
   }
 
   deactivate(id: string) {

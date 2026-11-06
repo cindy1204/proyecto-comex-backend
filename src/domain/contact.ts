@@ -1,3 +1,5 @@
+import type { PaginatedResult, PaginationQuery } from './pagination.js';
+
 export type ContactProduct = 'importaciones' | 'exportaciones' | 'deudaExterna' | 'inversiones' | 'servicios';
 
 export interface ContactRequestInput {
@@ -11,6 +13,7 @@ export interface ContactRequestInput {
 
 export interface ContactRequestRecord {
   id: string;
+  userId: string | null;
   nombreCompleto: string;
   email: string;
   empresa: string | null;
@@ -22,6 +25,8 @@ export interface ContactRequestRecord {
 
 export interface ContactRepository {
   create(input: ContactRequestInput, userId?: string): Promise<{ id: string; createdAt: Date }>;
-  findByUser(userId: string): Promise<ContactRequestRecord[]>;
-  findAll(): Promise<ContactRequestRecord[]>;
+  findById(id: string): Promise<ContactRequestRecord | null>;
+  list(filter: PaginationQuery & { userId?: string; tipoProducto?: ContactProduct; search?: string }): Promise<PaginatedResult<ContactRequestRecord>>;
+  update(id: string, input: Partial<ContactRequestInput>): Promise<ContactRequestRecord>;
+  delete(id: string): Promise<void>;
 }

@@ -12,7 +12,11 @@ type CatalogData = Record<string, CatalogGroup>;
 async function loadCatalog(): Promise<CatalogData> {
   const sourcePath = resolve(process.cwd(), 'prisma/data/catalogo.json');
   const source = await readFile(sourcePath, 'utf8');
-  return JSON.parse(source) as CatalogData;
+  const catalog = JSON.parse(source) as CatalogData;
+  const servicesPath = resolve(process.cwd(), 'prisma/data/servicios.json');
+  const services = JSON.parse(await readFile(servicesPath, 'utf8')) as CatalogGroup;
+  catalog.servicios = services;
+  return catalog;
 }
 
 async function seedCatalog() {

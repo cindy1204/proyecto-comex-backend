@@ -1,5 +1,6 @@
 import type { ErrorRequestHandler, NextFunction, Request, Response } from 'express';
 import { ZodError } from 'zod';
+import multer from 'multer';
 import { ApplicationError } from '../../../domain/errors.js';
 
 export class HttpError extends ApplicationError {}
@@ -20,6 +21,17 @@ export const errorHandler: ErrorRequestHandler = (error: unknown, _request, resp
         code: 'VALIDATION_ERROR',
         message: 'Revisa los datos enviados.',
         details: error.issues.map((issue) => ({ field: issue.path.join('.'), message: issue.message })),
+      },
+    });
+    return;
+  }
+
+  if (error instanceof multer.MulterError) {
+    const status = error.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
+    response.status(status).json({
+      error: {
+        code: error.code,
+        message: status === 413 ? 'La imagen supera el tamaño máximo de 5 MB.' : 'No se pudo procesar el archivo enviado.',
       },
     });
     return;

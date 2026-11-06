@@ -39,6 +39,7 @@ model CatalogItem {
   title        String
   description  String           @db.Text
   note         String?          @db.Text
+  imageUrl     String?          @map("image_url") @db.Text
   active       Boolean          @default(true)
   createdAt    DateTime         @default(now()) @map("created_at")
   updatedAt    DateTime         @updatedAt @map("updated_at")

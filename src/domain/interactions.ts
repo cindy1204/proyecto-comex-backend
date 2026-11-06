@@ -1,5 +1,6 @@
 import type { CatalogItemRecord } from './catalog.js';
 import type { UserRoleName } from './auth.js';
+import type { PaginatedResult, PaginationQuery } from './pagination.js';
 
 export interface InteractionRecord {
   id: string;
@@ -19,8 +20,10 @@ export interface InteractionRepository {
     type: string;
     data: Record<string, unknown>;
   }): Promise<InteractionRecord>;
-  findByUser(userId: string): Promise<InteractionRecord[]>;
-  findAll(): Promise<InteractionRecord[]>;
+  findById(id: string): Promise<InteractionRecord | null>;
+  list(filter: PaginationQuery & { userId?: string; type?: string }): Promise<PaginatedResult<InteractionRecord>>;
+  update(id: string, input: { type: string; catalogItemId: string; data: Record<string, unknown> }): Promise<InteractionRecord>;
+  delete(id: string): Promise<void>;
 }
 
 export type InteractionOwner = { id: string; role: UserRoleName };

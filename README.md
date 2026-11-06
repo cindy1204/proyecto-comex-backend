@@ -36,7 +36,8 @@ Las rutas no acceden directamente a Prisma: invocan servicios de aplicación que
    npm run db:seed
    ```
 
-   El seed carga los numerales incluidos en `prisma/data/catalogo.json`, por lo que el backend puede instalarse y ejecutarse sin depender de otros directorios del workspace. Para crear cuentas de prueba, completa `SEED_ADMIN_*` y `SEED_USER_*` en `.env`; usa contraseñas propias de al menos 12 caracteres.
+   El seed carga los numerales de `prisma/data/catalogo.json` y los de servicios, transferencias y otros conceptos de `prisma/data/servicios.json`. La segunda lista se transcribió del Anexo 3 del DCIP-83 aportado, actualizado al 1 de septiembre de 2021; confirma la vigencia normativa antes de usarla para una operación real. Para crear cuentas de prueba, completa `SEED_ADMIN_*` y `SEED_USER_*` en `.env`; usa contraseñas propias de al menos 12 caracteres.
+   Para carga de imágenes, crea un bucket público de Supabase Storage y configura `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` y `SUPABASE_STORAGE_BUCKET`. La llave de servicio se conserva solo en el backend y nunca se publica en el frontend.
 5. Inicia el servidor:
 
    ```powershell
@@ -49,7 +50,7 @@ Las rutas no acceden directamente a Prisma: invocan servicios de aplicación que
 
 Las interacciones autenticadas de importación y exportación se vinculan con el usuario y el numeral seleccionado; los datos del formulario se almacenan en formato JSON. Las solicitudes de contacto son públicas y, si se envían con una sesión iniciada, quedan asociadas a esa cuenta. Usa únicamente información de prueba durante el desarrollo y restringe el acceso a la base de datos.
 
-Las tablas de la base usan nombres en español: `usuarios`, `elementos_catalogo`, `interacciones` y `solicitudes_contacto`. Las migraciones de renombrado conservan los registros y las relaciones existentes.
+Las tablas de la base usan nombres en español: `usuarios`, `elementos_catalogo`, `interacciones` y `solicitudes_contacto`. Las migraciones de renombrado conservan los registros y las relaciones existentes. `elementos_catalogo.image_url` guarda la URL pública devuelta por Supabase Storage, no el archivo ni una URL ingresada manualmente.
 
 ## Endpoints
 
@@ -59,15 +60,21 @@ Las tablas de la base usan nombres en español: `usuarios`, `elementos_catalogo`
 | POST | `/api/auth/login` | Público |
 | GET | `/api/auth/me` | Autenticado |
 | POST | `/api/auth/admins` | Solo admin; registrar otro administrador |
-| GET | `/api/catalogo?page=1&pageSize=10&category=exportaciones&direction=INGRESOS&search=café` | Público |
-| GET | `/api/catalogo/:id` | Público |
-| POST, PUT, DELETE | `/api/catalogo` y `/api/catalogo/:id` | Solo admin |
-| POST | `/api/contacto` | Público; opcionalmente autenticado para asociar la solicitud a la cuenta |
-| GET | `/api/contacto/mias` | Autenticado; solo solicitudes de contacto propias |
-| GET | `/api/contacto` | Solo admin; listar solicitudes recibidas |
-| POST | `/api/interaccion` | Autenticado |
-| GET | `/api/interaccion/mias` | Autenticado; solo interacciones propias |
-| GET | `/api/interaccion` | Solo admin |
+| GET | `/api/catalogos?currentPage=1&limit=10&category=exportaciones&direction=INGRESOS&search=café` | Público; respuesta `{ data, pagination }` |
+| GET | `/api/catalogos/:id` | Público |
+| POST, PUT, DELETE | `/api/catalogos` y `/api/catalogos/:id` | Solo admin; DELETE desactiva el numeral para preservar historial |
+| POST | `/api/catalogos/:id/imagen` (`multipart/form-data`, campo `image`) | Solo admin; JPG/PNG/WebP hasta 5 MB, URL subida a Supabase Storage y guardada en PostgreSQL |
+| POST | `/api/solicitudes-contacto` | Público; opcionalmente autenticado para asociar la solicitud a la cuenta |
+| POST | `/api/solicitudes-contacto/formularios` | Autenticado; guardar formularios de servicios asociados a la cuenta |
+| GET | `/api/solicitudes-contacto/mias?currentPage=1&limit=10&tipoProducto=servicios` | Autenticado; solo registros propios, paginados |
+| GET | `/api/solicitudes-contacto?currentPage=1&limit=10&search=empresa` | Solo admin; filtro por tipo y texto, paginado |
+| GET, PUT, DELETE | `/api/solicitudes-contacto/:id` | Propietario o admin; los registros públicos sin propietario solo los administra el admin |
+| POST | `/api/interacciones` | Autenticado |
+| GET | `/api/interacciones/mias?currentPage=1&limit=10&type=formulario-importaciones` | Autenticado; solo interacciones propias, paginadas |
+| GET | `/api/interacciones?currentPage=1&limit=10&type=formulario-exportaciones` | Solo admin; filtro por tipo, paginado |
+| GET, PUT, DELETE | `/api/interacciones/:id` | Propietario o admin |
+
+Las rutas antiguas singulares (`/api/catalogo`, `/api/contacto` y `/api/interaccion`) siguen disponibles como alias de compatibilidad. Los listados paginados incluyen `total`, `currentPage`, `limit` y `totalPages` dentro de `pagination` (además de los alias `page` y `pageSize`). Las actualizaciones parciales usan PUT y responden `200`; las creaciones `201`; los borrados `204`; las validaciones `400`; la falta de autenticación `401`; y la falta de permisos `403` (los recursos fuera de propiedad responden `404`).
 
 El registro siempre asigna el rol `USER`; el cliente no puede otorgarse permisos de administrador. Las interacciones toman el ID del usuario autenticado, nunca del cuerpo de la petición, y quedan vinculadas por llaves foráneas al usuario y al elemento del catálogo elegido. El login devuelve un JWT con los claims `id` y `role`; envíalo como `Authorization: Bearer <token>`. Para mantener compatibilidad temporal, la API también puede leer tokens anteriores que usaban `sub`.
 

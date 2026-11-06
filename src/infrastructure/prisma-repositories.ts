@@ -1,7 +1,8 @@
-import { CatalogDirection, Prisma, UserRole } from '@prisma/client';
-import type { CatalogFilter, CatalogItemInput, CatalogItemRecord, CatalogRepository } from '../domain/catalog.js';
+import { CatalogDirection, Prisma } from '@prisma/client';
+import type { CatalogFilter, CatalogItemInput, CatalogItemRecord, CatalogItemUpdate, CatalogRepository } from '../domain/catalog.js';
 import type { ContactRepository, ContactRequestInput, ContactRequestRecord } from '../domain/contact.js';
 import type { InteractionRecord, InteractionRepository } from '../domain/interactions.js';
+import { createPagination } from '../domain/pagination.js';
 import { prisma } from './prisma-client.js';
 
 export class PrismaCatalogRepository implements CatalogRepository {
@@ -32,19 +33,15 @@ export class PrismaCatalogRepository implements CatalogRepository {
       }),
     ]);
 
-    return {
-      pagination: {
-        page: filter.page,
-        pageSize: filter.pageSize,
-        total,
-        totalPages: Math.ceil(total / filter.pageSize),
-      },
-      data: items,
-    };
+    return createPagination(items, total, filter);
   }
 
   findActiveById(id: string): Promise<CatalogItemRecord | null> {
     return prisma.catalogItem.findFirst({ where: { id, active: true } });
+  }
+
+  findById(id: string): Promise<CatalogItemRecord | null> {
+    return prisma.catalogItem.findUnique({ where: { id } });
   }
 
   findActiveByCategoryAndCode(category: string, code: string): Promise<CatalogItemRecord | null> {
@@ -55,7 +52,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
     return prisma.catalogItem.create({ data: item });
   }
 
-  update(id: string, item: Partial<CatalogItemInput>): Promise<CatalogItemRecord> {
+  update(id: string, item: CatalogItemUpdate): Promise<CatalogItemRecord> {
     return prisma.catalogItem.update({ where: { id }, data: item });
   }
 
@@ -81,25 +78,49 @@ export class PrismaInteractionRepository implements InteractionRepository {
     return { ...interaction, data: toJsonObject(interaction.data) };
   }
 
-  async findByUser(userId: string): Promise<InteractionRecord[]> {
-    const interactions = await prisma.interaction.findMany({
-      where: { userId },
+  async findById(id: string): Promise<InteractionRecord | null> {
+    const interaction = await prisma.interaction.findUnique({
+      where: { id },
       include: { catalogItem: { select: { id: true, category: true, code: true, title: true } } },
-      orderBy: { createdAt: 'desc' },
     });
-    return interactions.map((interaction) => ({ ...interaction, data: toJsonObject(interaction.data) }));
+    return interaction ? { ...interaction, data: toJsonObject(interaction.data) } : null;
   }
 
-  async findAll(): Promise<InteractionRecord[]> {
-    const interactions = await prisma.interaction.findMany({
-      include: {
-        user: { select: { id: true, name: true, email: true } },
-        catalogItem: { select: { id: true, category: true, code: true, title: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-    return interactions.map((interaction) => ({ ...interaction, data: toJsonObject(interaction.data) }));
+  async list(filter: { page: number; pageSize: number; userId?: string; type?: string }) {
+    const where: Prisma.InteractionWhereInput = {
+      ...(filter.userId ? { userId: filter.userId } : {}),
+      ...(filter.type ? { type: filter.type } : {}),
+    };
+    const [total, interactions] = await prisma.$transaction([
+      prisma.interaction.count({ where }),
+      prisma.interaction.findMany({
+        where,
+        include: { catalogItem: { select: { id: true, category: true, code: true, title: true } } },
+        orderBy: { createdAt: 'desc' },
+        skip: (filter.page - 1) * filter.pageSize,
+        take: filter.pageSize,
+      }),
+    ]);
+    return createPagination(
+      interactions.map((interaction) => ({ ...interaction, data: toJsonObject(interaction.data) })),
+      total,
+      filter,
+    );
   }
+
+  async update(id: string, input: { type: string; catalogItemId: string; data: Record<string, unknown> }): Promise<InteractionRecord> {
+    const interaction = await prisma.interaction.update({
+      where: { id },
+      data: { ...input, data: toPrismaJsonObject(input.data) },
+      include: { catalogItem: { select: { id: true, category: true, code: true, title: true } } },
+    });
+    return { ...interaction, data: toJsonObject(interaction.data) };
+  }
+
+  async delete(id: string): Promise<void> {
+    await prisma.interaction.delete({ where: { id } });
+  }
+
 }
 
 export class PrismaContactRepository implements ContactRepository {
@@ -118,24 +139,64 @@ export class PrismaContactRepository implements ContactRepository {
     });
   }
 
-  async findByUser(userId: string): Promise<ContactRequestRecord[]> {
-    const contacts = await prisma.contactRequest.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-    });
-    return contacts.map(toContactRequestRecord);
+  async findById(id: string): Promise<ContactRequestRecord | null> {
+    const contact = await prisma.contactRequest.findUnique({ where: { id } });
+    return contact ? toContactRequestRecord(contact) : null;
   }
 
-  async findAll(): Promise<ContactRequestRecord[]> {
-    const contacts = await prisma.contactRequest.findMany({
-      orderBy: { createdAt: 'desc' },
+  async list(filter: {
+    page: number;
+    pageSize: number;
+    userId?: string;
+    tipoProducto?: ContactRequestInput['tipoProducto'];
+    search?: string;
+  }) {
+    const where: Prisma.ContactRequestWhereInput = {
+      ...(filter.userId ? { userId: filter.userId } : {}),
+      ...(filter.tipoProducto ? { tipoProducto: filter.tipoProducto } : {}),
+      ...(filter.search ? {
+        OR: [
+          { nombreCompleto: { contains: filter.search, mode: 'insensitive' } },
+          { email: { contains: filter.search, mode: 'insensitive' } },
+        ],
+      } : {}),
+    };
+    const [total, contacts] = await prisma.$transaction([
+      prisma.contactRequest.count({ where }),
+      prisma.contactRequest.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (filter.page - 1) * filter.pageSize,
+        take: filter.pageSize,
+      }),
+    ]);
+    return createPagination(contacts.map(toContactRequestRecord), total, filter);
+  }
+
+  async update(id: string, input: Partial<ContactRequestInput>): Promise<ContactRequestRecord> {
+    const { descripcionCaso, ...fields } = input;
+    const contact = await prisma.contactRequest.update({
+      where: { id },
+      data: {
+        ...(fields.nombreCompleto !== undefined ? { nombreCompleto: fields.nombreCompleto } : {}),
+        ...(fields.email !== undefined ? { email: fields.email } : {}),
+        ...(fields.empresa !== undefined ? { empresa: fields.empresa || null } : {}),
+        ...(fields.telefono !== undefined ? { telefono: fields.telefono || null } : {}),
+        ...(fields.tipoProducto !== undefined ? { tipoProducto: fields.tipoProducto } : {}),
+        ...(descripcionCaso !== undefined ? { respuestas: { descripcionCaso } } : {}),
+      },
     });
-    return contacts.map(toContactRequestRecord);
+    return toContactRequestRecord(contact);
+  }
+
+  async delete(id: string): Promise<void> {
+    await prisma.contactRequest.delete({ where: { id } });
   }
 }
 
 function toContactRequestRecord(contact: {
   id: string;
+  userId: string | null;
   nombreCompleto: string;
   email: string;
   empresa: string | null;
@@ -146,6 +207,7 @@ function toContactRequestRecord(contact: {
 }): ContactRequestRecord {
   return {
     id: contact.id,
+    userId: contact.userId,
     nombreCompleto: contact.nombreCompleto,
     email: contact.email,
     empresa: contact.empresa,

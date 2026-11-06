@@ -53,8 +53,11 @@ const authRateLimit = rateLimit({
   legacyHeaders: false,
 });
 app.use('/api/auth', authRateLimit, createAuthRouter(authService));
-app.use('/api/catalogo', createCatalogRouter(catalogService, authService));
-app.use('/api/contacto', createContactRouter(contactService, authService));
-app.use('/api/interaccion', createInteractionRouter(interactionService, authService));
+const catalogRouter = createCatalogRouter(catalogService, authService);
+const contactRouter = createContactRouter(contactService, authService);
+const interactionRouter = createInteractionRouter(interactionService, authService);
+app.use(['/api/catalogos', '/api/catalogo'], catalogRouter);
+app.use(['/api/solicitudes-contacto', '/api/contacto'], contactRouter);
+app.use(['/api/interacciones', '/api/interaccion'], interactionRouter);
 app.use(notFound);
 app.use(errorHandler);
