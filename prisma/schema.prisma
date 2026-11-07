@@ -17,6 +17,16 @@ enum CatalogDirection {
   EGRESOS
 }
 
+enum RecordState {
+  ACTIVE
+  REMOVED
+}
+
+enum InteractionType {
+  FORMULARIO_IMPORTACIONES @map("formulario-importaciones")
+  FORMULARIO_EXPORTACIONES @map("formulario-exportaciones")
+}
+
 model User {
   id              String           @id @default(cuid())
   name            String
@@ -40,45 +50,55 @@ model CatalogItem {
   description  String           @db.Text
   note         String?          @db.Text
   imageUrl     String?          @map("image_url") @db.Text
-  active       Boolean          @default(true)
+  state        RecordState      @default(ACTIVE)
+  deletedAt    DateTime?        @map("deleted_at")
   createdAt    DateTime         @default(now()) @map("created_at")
   updatedAt    DateTime         @updatedAt @map("updated_at")
   interactions Interaction[]
 
   @@unique([category, direction, code])
-  @@index([category, direction, active])
+  @@index([category, direction, state])
+  @@index([state, createdAt])
   @@map("elementos_catalogo")
 }
 
 model Interaction {
-  id            String      @id @default(cuid())
-  userId        String      @map("user_id")
-  catalogItemId String      @map("catalog_item_id")
-  type          String
+  id            String          @id @default(cuid())
+  userId        String          @map("user_id")
+  catalogItemId String          @map("catalog_item_id")
+  type          InteractionType
   data          Json
-  createdAt     DateTime    @default(now()) @map("created_at")
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  catalogItem   CatalogItem @relation(fields: [catalogItemId], references: [id], onDelete: Restrict)
+  state         RecordState     @default(ACTIVE)
+  deletedAt     DateTime?       @map("deleted_at")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  catalogItem   CatalogItem     @relation(fields: [catalogItemId], references: [id], onDelete: Restrict)
 
-  @@index([userId, createdAt])
+  @@index([userId, state, createdAt])
+  @@index([state, type, createdAt])
   @@index([catalogItemId])
   @@map("interacciones")
 }
 
 model ContactRequest {
-  id             String   @id @default(cuid())
-  userId         String?  @map("user_id")
-  nombreCompleto String   @map("nombre_completo") @db.VarChar(120)
-  email          String   @db.VarChar(254)
-  empresa        String?  @db.VarChar(160)
-  telefono       String?  @db.VarChar(40)
-  tipoProducto   String   @map("tipo_producto") @db.VarChar(40)
-  respuestas     Json
-  createdAt      DateTime @default(now()) @map("created_at")
-  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id              String      @id @default(cuid())
+  userId          String?     @map("user_id")
+  nombreCompleto  String      @map("nombre_completo") @db.VarChar(120)
+  email           String      @db.VarChar(254)
+  empresa         String?     @db.VarChar(160)
+  telefono        String?     @db.VarChar(40)
+  tipoProducto    String      @map("tipo_producto") @db.VarChar(40)
+  descripcionCaso String      @map("descripcion_caso") @db.Text
+  montoEstimado   Decimal?    @map("monto_estimado") @db.Decimal(14, 2)
+  state           RecordState @default(ACTIVE)
+  deletedAt       DateTime?   @map("deleted_at")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+  user            User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  @@index([createdAt])
-  @@index([tipoProducto, createdAt])
-  @@index([userId, createdAt])
+  @@index([state, createdAt])
+  @@index([state, tipoProducto, createdAt])
+  @@index([userId, state, createdAt])
   @@map("solicitudes_contacto")
 }
