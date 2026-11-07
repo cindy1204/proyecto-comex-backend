@@ -1,3 +1,5 @@
 import { PrismaClient } from '@prisma/client';
 
-export const prisma = new PrismaClient();
+export function createPrismaClient(databaseUrl: string): PrismaClient {
+  return new PrismaClient({ datasourceUrl: databaseUrl });
+}
