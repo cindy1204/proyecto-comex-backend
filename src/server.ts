@@ -1,21 +1,41 @@
-import { app } from './interface/http/app.js';
-import { config } from './infrastructure/config.js';
-import { prisma } from './infrastructure/prisma-client.js';
+import 'dotenv/config';
+import { createApp } from './interface/app.js';
+import { createContainer } from './interface/container.js';
+import { loadConfig } from './infrastructure/config.js';
+import { logger } from './infrastructure/logger.js';
 
-const server = app.listen(config.port, () => {
-  console.log(`API de ColComex disponible en http://localhost:${config.port}`);
-});
+const SHUTDOWN_SIGNALS = ['SIGINT', 'SIGTERM'] as const;
 
-async function shutdown(signal: string) {
-  console.log(`Cerrando API por ${signal}...`);
-  server.close(async (error) => {
-    if (error) {
-      console.error('No se pudo cerrar el servidor HTTP correctamente:', error);
-      process.exitCode = 1;
-    }
-    await prisma.$disconnect();
+function main(): void {
+  const config = loadConfig(process.env);
+  const container = createContainer(config);
+  const app = createApp(container, { corsOrigins: config.corsOrigins });
+
+  const server = app.listen(config.port, () => {
+    logger.info(`API escuchando en el puerto ${config.port}.`);
   });
+
+  let closing = false;
+  const shutdown = (signal: string): void => {
+    if (closing) return;
+    closing = true;
+    logger.info(`Señal ${signal} recibida: cerrando el servidor.`);
+    server.close(() => {
+      container.shutdown().then(
+        () => process.exit(0),
+        (error: unknown) => {
+          logger.error('No se pudo cerrar la conexión con la base de datos.', error);
+          process.exit(1);
+        },
+      );
+    });
+  };
+  for (const signal of SHUTDOWN_SIGNALS) process.on(signal, () => shutdown(signal));
 }
 
-process.on('SIGINT', () => void shutdown('SIGINT'));
-process.on('SIGTERM', () => void shutdown('SIGTERM'));
+try {
+  main();
+} catch (error) {
+  logger.error('No se pudo iniciar la API.', error);
+  process.exit(1);
+}
