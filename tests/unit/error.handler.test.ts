@@ -61,12 +61,36 @@ describe('errorHandler', () => {
     ['P2003', 409, 'CONFLICT'],
     ['P2025', 404, 'NOT_FOUND'],
     ['P2000', 400, 'VALIDATION_ERROR'],
+    ['P2006', 400, 'VALIDATION_ERROR'],
+    ['P2011', 400, 'VALIDATION_ERROR'],
+    ['P2012', 400, 'VALIDATION_ERROR'],
+    ['P2023', 400, 'VALIDATION_ERROR'],
+    ['P2014', 409, 'RELATION_CONFLICT'],
   ])('mapea el error de Prisma %s a %i', async (code, status, errorCode) => {
     const response = await request(appThrowing(prismaError(code))).get('/boom');
 
     expect(response.status).toBe(status);
     expect(response.body.error.code).toBe(errorCode);
     expect(JSON.stringify(response.body)).not.toContain('prisma');
+  });
+
+  it('mapea PrismaClientValidationError a 400 sin filtrar la consulta', async () => {
+    const error = Object.assign(new Error('Argument `where` is missing at /srv/secret/path.ts'), {
+      name: 'PrismaClientValidationError',
+    });
+
+    const response = await request(appThrowing(error)).get('/boom');
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe('VALIDATION_ERROR');
+    expect(JSON.stringify(response.body)).not.toContain('secret');
+  });
+
+  it('responde 500 genérico ante errores de Prisma desconocidos', async () => {
+    const response = await request(appThrowing(prismaError('P9999'))).get('/boom');
+
+    expect(response.status).toBe(500);
+    expect(response.body.error.code).toBe('INTERNAL_ERROR');
   });
 
   it('responde 413 cuando el cuerpo supera el límite', async () => {

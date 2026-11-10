@@ -57,11 +57,22 @@ function describeError(error: unknown): ErrorBody {
       return { status: 409, code: 'CONFLICT', message: 'Ya existe un registro con esos datos.' };
     case 'P2003':
       return { status: 409, code: 'CONFLICT', message: 'El registro depende de otro que no existe o sigue en uso.' };
+    case 'P2006':
+    case 'P2011':
+    case 'P2012':
+    case 'P2023':
+      return { status: 400, code: 'VALIDATION_ERROR', message: 'Revisa los datos enviados.' };
+    case 'P2014':
+      return { status: 409, code: 'RELATION_CONFLICT', message: 'La operación rompería una relación entre registros.' };
     case 'P2025':
       return { status: 404, code: 'NOT_FOUND', message: 'El registro solicitado no existe.' };
-    default:
-      return { status: 500, code: 'INTERNAL_ERROR', message: 'Ocurrió un error interno.' };
   }
+
+  // Prisma rechaza consultas mal formadas (tipos o campos inválidos) sin código de error.
+  if (error instanceof Error && error.name === 'PrismaClientValidationError') {
+    return { status: 400, code: 'VALIDATION_ERROR', message: 'Revisa los datos enviados.' };
+  }
+  return { status: 500, code: 'INTERNAL_ERROR', message: 'Ocurrió un error interno.' };
 }
 
 /** Errores generados por Express/body-parser (JSON inválido, cuerpo grande, parámetros mal codificados). */
