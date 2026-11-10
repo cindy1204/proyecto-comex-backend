@@ -50,7 +50,7 @@ export class ContactPrismaRepository implements IContactRepository {
       this.prisma.contactRequest.count({ where }),
       this.prisma.contactRequest.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         skip: (filter.page - 1) * filter.limit,
         take: filter.limit,
       }),

@@ -65,7 +65,7 @@ export class InteractionPrismaRepository implements IInteractionRepository {
       this.prisma.interaction.findMany({
         where,
         include,
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         skip: (filter.page - 1) * filter.limit,
         take: filter.limit,
       }),
