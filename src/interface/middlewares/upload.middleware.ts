@@ -14,7 +14,15 @@ export const IMAGE_FIELD = 'image';
  */
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: MAX_IMAGE_BYTES, files: 1 },
+  limits: {
+    fileSize: MAX_IMAGE_BYTES,
+    files: 1,
+    // El catálogo tiene 7 campos de texto como máximo; 10 deja holgura y `parts` suma el archivo y un margen.
+    fields: 10,
+    // Bytes por campo: el texto más largo (description/note) admite 10 000 caracteres, hasta 4 bytes cada uno en UTF-8.
+    fieldSize: 40_000,
+    parts: 12,
+  },
 });
 
 const singleImage = upload.single(IMAGE_FIELD);
@@ -35,6 +43,13 @@ function translateUploadError(error: unknown): Error {
     if (error.code === 'LIMIT_UNEXPECTED_FILE' || error.code === 'LIMIT_FILE_COUNT') {
       return new BadRequestError(
         `Envía como máximo un archivo en el campo "${IMAGE_FIELD}".`,
+        undefined,
+        'INVALID_UPLOAD',
+      );
+    }
+    if (error.code === 'LIMIT_FIELD_COUNT' || error.code === 'LIMIT_PART_COUNT' || error.code === 'LIMIT_FIELD_VALUE') {
+      return new BadRequestError(
+        'El formulario multipart supera los límites de campos o de tamaño por campo.',
         undefined,
         'INVALID_UPLOAD',
       );

@@ -63,4 +63,31 @@ describe('uploadImage', () => {
 
     expect(response.status).toBe(400);
   });
+
+  it('responde 400 si hay más de 10 campos de texto', async () => {
+    let upload = request(app()).post('/upload');
+    for (let index = 0; index < 11; index += 1) upload = upload.field(`campo${index}`, 'x');
+
+    const response = await upload;
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe('INVALID_UPLOAD');
+  });
+
+  it('responde 400 si un campo de texto supera el tamaño permitido', async () => {
+    const response = await request(app()).post('/upload').field('description', 'a'.repeat(40_001));
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe('INVALID_UPLOAD');
+  });
+
+  it('acepta un campo de texto en el límite de tamaño y hasta 10 campos', async () => {
+    let upload = request(app()).post('/upload').field('description', 'a'.repeat(40_000));
+    for (let index = 0; index < 9; index += 1) upload = upload.field(`campo${index}`, 'x');
+
+    const response = await upload;
+
+    expect(response.status).toBe(200);
+    expect(Object.keys(response.body.body)).toHaveLength(10);
+  });
 });
