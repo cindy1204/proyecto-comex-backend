@@ -54,7 +54,7 @@ Los borrados de catálogo, interacciones y solicitudes son lógicos (`state` = `
 npm install
 cp .env.example .env        # completa DATABASE_URL, DIRECT_URL (igual en local), JWT_SECRET y JWT_EXPIRES_IN
 npm run prisma:deploy       # aplica las migraciones
-npm run db:seed             # catálogo y cuentas de demostración (idempotente)
+npm run db:seed             # catálogo y cuentas de demostración (idempotente); también `npx prisma db seed`
 npm run dev                 # http://localhost:3001  (verifica GET /health)
 ```
 

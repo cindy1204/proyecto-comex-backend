@@ -23,6 +23,9 @@
     "prisma:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts"
   },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "dependencies": {
     "@prisma/client": "^6.19.0",
     "@supabase/supabase-js": "^2.119.0",
