@@ -22,6 +22,13 @@ export interface Session {
   expiresIn: number;
 }
 
+/**
+ * Hash bcrypt (coste 12, igual que el real) de un texto aleatorio descartado; no es un secreto.
+ * Se compara cuando el correo no existe para que el login tarde lo mismo que con un usuario real
+ * y no revele por tiempo qué correos están registrados.
+ */
+const DUMMY_PASSWORD_HASH = '$2b$12$gCLDeZOrrm88PY6UM/agvewPQn8PScLzAF1aCN6bkIz5V6Etbt6ti';
+
 export class AuthUseCase {
   constructor(
     private readonly users: IUserRepository,
@@ -41,7 +48,8 @@ export class AuthUseCase {
 
   async login(input: Credentials): Promise<Session> {
     const user = await this.users.findByEmail(input.email);
-    const matches = user ? await this.passwords.compare(input.password, user.passwordHash) : false;
+    // Se compara siempre, incluso sin usuario, para igualar el tiempo de respuesta.
+    const matches = await this.passwords.compare(input.password, user?.passwordHash ?? DUMMY_PASSWORD_HASH);
     if (!user || !matches) {
       throw new UnauthorizedError('Credenciales inválidas.', 'INVALID_CREDENTIALS');
     }

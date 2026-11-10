@@ -11,6 +11,10 @@ describe('API /api/auth', () => {
 
   const body = { name: 'Ana Pérez', email: 'ana@test.com', password: 'Secreta#123' };
 
+  /** Ninguna respuesta debe filtrar el hash de la contraseña ni nada con forma de hash bcrypt. */
+  const expectNoHashLeak = (responseBody: unknown) =>
+    expect(JSON.stringify(responseBody)).not.toMatch(/passwordHash|\$2[aby]\$/);
+
   it('GET /health responde 200 {status:"ok"}', async () => {
     const response = await request(t.app).get('/health');
 
@@ -28,6 +32,7 @@ describe('API /api/auth', () => {
     expect(Object.keys(response.body.data.user).sort()).toEqual(['createdAt', 'email', 'id', 'name', 'role']);
     expect(response.body.data.token).toEqual(expect.any(String));
     expect(response.body.data.expiresIn).toEqual(expect.any(Number));
+    expectNoHashLeak(response.body);
   });
 
   it('POST /register con correo duplicado responde 409', async () => {
@@ -59,6 +64,8 @@ describe('API /api/auth', () => {
     expect(ok.body.data).toEqual(expect.objectContaining({ token: expect.any(String), expiresIn: expect.any(Number) }));
     expect(bad.status).toBe(401);
     expect(bad.body.error.message).toBe('Credenciales inválidas.');
+    expectNoHashLeak(ok.body);
+    expectNoHashLeak(bad.body);
   });
 
   it('GET /me devuelve el usuario y exige token', async () => {
@@ -70,6 +77,7 @@ describe('API /api/auth', () => {
     expect(ok.status).toBe(200);
     expect(ok.body.data).toMatchObject({ id, role: 'user' });
     expect(missing.status).toBe(401);
+    expectNoHashLeak(ok.body);
   });
 
   it('GET /me con el token de un usuario eliminado responde 401', async () => {

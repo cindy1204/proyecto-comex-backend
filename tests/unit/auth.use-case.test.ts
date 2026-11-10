@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ConflictError } from '../../src/application/errors/conflict.error.js';
 import { NotFoundError } from '../../src/application/errors/not-found.error.js';
 import { UnauthorizedError } from '../../src/application/errors/unauthorized.error.js';
@@ -61,6 +61,24 @@ describe('AuthUseCase', () => {
       status: 401,
       message: 'Credenciales inválidas.',
     });
+  });
+
+  it('ejecuta passwords.compare aunque el usuario no exista, contra un hash bcrypt falso', async () => {
+    const compare = vi.spyOn(infra.passwords, 'compare');
+
+    await expect(auth.login({ email: 'nadie@test.com', password: 'Secreta#123' })).rejects.toMatchObject({
+      status: 401,
+      message: 'Credenciales inválidas.',
+    });
+
+    expect(compare).toHaveBeenCalledTimes(1);
+    expect(compare).toHaveBeenCalledWith('Secreta#123', expect.stringMatching(/^\$2[aby]\$12\$/));
+  });
+
+  it('no inicia sesión con el hash falso aunque la contraseña coincida con él', async () => {
+    vi.spyOn(infra.passwords, 'compare').mockResolvedValue(true);
+
+    await expect(auth.login({ email: 'nadie@test.com', password: 'x' })).rejects.toBeInstanceOf(UnauthorizedError);
   });
 
   it('autentica un token vigente con el rol de la base de datos', async () => {
