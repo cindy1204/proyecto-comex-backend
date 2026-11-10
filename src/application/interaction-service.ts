@@ -2,6 +2,7 @@ import type { CatalogRepository } from '../domain/catalog.js';
 import type { InteractionOwner, InteractionRepository } from '../domain/interactions.js';
 import { ApplicationError } from '../domain/errors.js';
 import type { PaginationQuery } from '../domain/pagination.js';
+import { parseInteractionData } from './interaction-data.js';
 
 const interactionNumerals = {
   'formulario-importaciones': { category: 'importaciones', field: 'numeralOperacion' },
@@ -21,6 +22,7 @@ export class InteractionService {
   ) {}
 
   async create(userId: string, type: InteractionType, data: Record<string, unknown>) {
+    data = parseInteractionData(type, data);
     const selection = interactionNumerals[type];
     const code = data[selection.field];
     if (typeof code !== 'string' || !code.trim()) {
@@ -59,8 +61,9 @@ export class InteractionService {
       throw new ApplicationError(400, 'VALIDATION_ERROR', 'El tipo de formulario no es válido.');
     }
     const data = { ...existing.data, ...input.data };
+    const validatedData = parseInteractionData(type, data);
     const selection = interactionNumerals[type];
-    const code = data[selection.field];
+    const code = validatedData[selection.field];
     if (typeof code !== 'string' || !code.trim()) {
       throw new ApplicationError(400, 'VALIDATION_ERROR', 'Selecciona un numeral cambiario válido.');
     }
@@ -69,7 +72,7 @@ export class InteractionService {
       throw new ApplicationError(400, 'VALIDATION_ERROR', 'El numeral no pertenece al catálogo activo.');
     }
 
-    return this.interactions.update(id, { type, data, catalogItemId: item.id });
+    return this.interactions.update(id, { type, data: validatedData, catalogItemId: item.id });
   }
 
   async delete(id: string, owner: InteractionOwner) {

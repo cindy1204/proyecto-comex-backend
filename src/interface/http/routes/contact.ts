@@ -5,6 +5,7 @@ import type { ContactService } from '../../../application/contact-service.js';
 import { asyncHandler } from '../middleware/async-handler.js';
 import type { AuthService } from '../../../application/auth-service.js';
 import { createAuthenticate, createOptionalAuthenticate, requireAdmin } from '../middleware/auth.js';
+import { idSchema } from '../validation.js';
 
 const contactRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -32,8 +33,8 @@ const contactUpdateSchema = z.object({
   message: 'Envía por lo menos un campo para actualizar.',
 });
 const contactListSchema = z.object({
-  page: z.coerce.number().int().min(1).default(1),
-  currentPage: z.coerce.number().int().min(1).optional(),
+  page: z.coerce.number().int().min(1).max(2147483647).default(1),
+  currentPage: z.coerce.number().int().min(1).max(2147483647).optional(),
   pageSize: z.coerce.number().int().min(1).max(100).optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
   tipoProducto: z.enum(['importaciones', 'exportaciones', 'deudaExterna', 'inversiones', 'servicios']).optional(),
@@ -70,12 +71,12 @@ export function createContactRouter(contactService: ContactService, authService:
   }));
 
   router.get('/:id', authenticate, asyncHandler(async (request, response) => {
-    const id = z.string().min(1).max(64).parse(request.params.id);
+    const id = idSchema.parse(request.params.id);
     response.json({ data: await contactService.findOne(id, request.auth!.userId, request.auth!.role) });
   }));
 
   router.put('/:id', authenticate, asyncHandler(async (request, response) => {
-    const id = z.string().min(1).max(64).parse(request.params.id);
+    const id = idSchema.parse(request.params.id);
     const input = contactUpdateSchema.parse(request.body);
     const { descripcionCaso, ...fields } = input;
     response.json({
@@ -87,7 +88,7 @@ export function createContactRouter(contactService: ContactService, authService:
   }));
 
   router.delete('/:id', authenticate, asyncHandler(async (request, response) => {
-    const id = z.string().min(1).max(64).parse(request.params.id);
+    const id = idSchema.parse(request.params.id);
     await contactService.delete(id, request.auth!.userId, request.auth!.role);
     response.status(204).end();
   }));

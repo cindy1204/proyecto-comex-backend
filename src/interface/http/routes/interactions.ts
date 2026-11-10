@@ -4,6 +4,7 @@ import type { InteractionService } from '../../../application/interaction-servic
 import type { AuthService } from '../../../application/auth-service.js';
 import { asyncHandler } from '../middleware/async-handler.js';
 import { createAuthenticate, requireAdmin } from '../middleware/auth.js';
+import { idSchema } from '../validation.js';
 
 const interactionSchema = z.object({
   type: z.enum(['formulario-importaciones', 'formulario-exportaciones']),
@@ -12,8 +13,8 @@ const interactionSchema = z.object({
 const interactionUpdateSchema = interactionSchema.partial().strict()
   .refine((value) => Object.keys(value).length > 0, 'Envía por lo menos un campo para actualizar.');
 const interactionListSchema = z.object({
-  page: z.coerce.number().int().min(1).default(1),
-  currentPage: z.coerce.number().int().min(1).optional(),
+  page: z.coerce.number().int().min(1).max(2147483647).default(1),
+  currentPage: z.coerce.number().int().min(1).max(2147483647).optional(),
   pageSize: z.coerce.number().int().min(1).max(100).optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
   type: z.enum(['formulario-importaciones', 'formulario-exportaciones']).optional(),
@@ -48,18 +49,18 @@ export function createInteractionRouter(
   }));
 
   router.get('/:id', asyncHandler(async (request, response) => {
-    const id = z.string().min(1).max(64).parse(request.params.id);
+    const id = idSchema.parse(request.params.id);
     response.json({ data: await interactionService.findOne(id, { id: request.auth!.userId, role: request.auth!.role }) });
   }));
 
   router.put('/:id', asyncHandler(async (request, response) => {
-    const id = z.string().min(1).max(64).parse(request.params.id);
+    const id = idSchema.parse(request.params.id);
     const input = interactionUpdateSchema.parse(request.body);
     response.json({ data: await interactionService.update(id, { id: request.auth!.userId, role: request.auth!.role }, input) });
   }));
 
   router.delete('/:id', asyncHandler(async (request, response) => {
-    const id = z.string().min(1).max(64).parse(request.params.id);
+    const id = idSchema.parse(request.params.id);
     await interactionService.delete(id, { id: request.auth!.userId, role: request.auth!.role });
     response.status(204).end();
   }));
