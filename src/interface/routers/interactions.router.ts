@@ -11,7 +11,9 @@ export function createInteractionsRouter(controller: InteractionsController, gua
   router.get('/', guards.requireAdmin, controller.listAll);
   router.get('/mias', controller.listMine);
   router.get('/:id', controller.getById);
+  // PUT y PATCH son equivalentes: los esquemas de actualización son parciales.
   router.put('/:id', controller.update);
+  router.patch('/:id', controller.update);
   router.delete('/:id', controller.remove);
 
   return router;

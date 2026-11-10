@@ -100,6 +100,28 @@ describe('API /api/interacciones', () => {
     expect(updated.status).toBe(200);
     expect(updated.body.data.data).toEqual(importData({ valorFob: '5', observaciones: '' }));
 
+    const patched = await request(t.app)
+      .patch(url)
+      .set(auth(owner.token))
+      .send({ data: { valorFob: '7' } });
+    expect(patched.status).toBe(200);
+    expect(patched.body.data.data).toEqual(importData({ valorFob: '7', observaciones: '' }));
+    expect(
+      (
+        await request(t.app)
+          .patch(url)
+          .set(auth(stranger))
+          .send({ data: { valorFob: '1' } })
+      ).status,
+    ).toBe(404);
+    expect(
+      (
+        await request(t.app)
+          .patch(url)
+          .send({ data: { valorFob: '1' } })
+      ).status,
+    ).toBe(401);
+
     expect((await request(t.app).delete(url).set(auth(owner.token))).status).toBe(204);
     expect((await request(t.app).get(url).set(auth(owner.token))).status).toBe(404);
   });

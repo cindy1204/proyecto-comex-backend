@@ -112,7 +112,11 @@ export class CatalogUseCase {
   private async assertKeyAvailable(key: CatalogItemKey, ownId?: string): Promise<void> {
     const existing = await this.catalog.findByKey(key);
     if (existing && existing.id !== ownId) {
-      throw new ConflictError('Ya existe un numeral con esa categoría, dirección y código.');
+      throw new ConflictError(
+        existing.state === 'REMOVED'
+          ? 'Ya existe un numeral con esa categoría, dirección y código, pero está eliminado: restáuralo con state ACTIVE.'
+          : 'Ya existe un numeral con esa categoría, dirección y código.',
+      );
     }
   }
 

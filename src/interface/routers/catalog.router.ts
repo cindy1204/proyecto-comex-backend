@@ -14,7 +14,9 @@ export function createCatalogRouter(
   router.get('/', guards.optionalAuthenticate, controller.list);
   router.get('/:id', guards.optionalAuthenticate, controller.getById);
   router.post('/', ...adminWrite, uploadImage, controller.create);
+  // PUT y PATCH son equivalentes: los esquemas de actualización son parciales.
   router.put('/:id', ...adminWrite, uploadImage, controller.update);
+  router.patch('/:id', ...adminWrite, uploadImage, controller.update);
   router.delete('/:id', guards.authenticate, guards.requireAdmin, controller.remove);
 
   return router;

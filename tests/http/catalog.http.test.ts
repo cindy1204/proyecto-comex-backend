@@ -145,6 +145,52 @@ describe('API /api/catalogos', () => {
     expect(empty.status).toBe(400);
   });
 
+  it('PATCH equivale a PUT: actualiza parcialmente y exige al menos un campo', async () => {
+    const id = (await create()).body.data.id;
+    const patch = (payload: object) =>
+      request(t.app).patch(`/api/catalogos/${id}`).set('Authorization', `Bearer ${admin}`).send(payload);
+
+    const updated = await patch({ title: 'Parcial' });
+    const empty = await patch({});
+    const anonymous = await request(t.app).patch(`/api/catalogos/${id}`).send({ title: 'x' });
+    const forbidden = await request(t.app)
+      .patch(`/api/catalogos/${id}`)
+      .set('Authorization', `Bearer ${user}`)
+      .send({ title: 'x' });
+
+    expect(updated.status).toBe(200);
+    expect(updated.body.data).toMatchObject({ title: 'Parcial', code: item.code, description: item.description });
+    expect(empty.status).toBe(400);
+    expect(anonymous.status).toBe(401);
+    expect(forbidden.status).toBe(403);
+  });
+
+  it('PATCH acepta multipart con imagen', async () => {
+    const id = (await create()).body.data.id;
+
+    const response = await request(t.app)
+      .patch(`/api/catalogos/${id}`)
+      .set('Authorization', `Bearer ${admin}`)
+      .attach('image', PNG_BYTES, { filename: 'foto.png', contentType: 'image/png' });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.imageUrl).toMatch(/^https:\/\/storage\.test\/catalogo\//);
+  });
+
+  it('el 409 por código duplicado indica que el numeral eliminado puede restaurarse', async () => {
+    const id = (await create()).body.data.id;
+    const active = await create();
+    await request(t.app).delete(`/api/catalogos/${id}`).set('Authorization', `Bearer ${admin}`);
+    const removed = await create();
+
+    expect(active.status).toBe(409);
+    expect(active.body.error.message).not.toMatch(/eliminado/);
+    expect(removed.status).toBe(409);
+    expect(removed.body.error.message).toMatch(/existe/);
+    expect(removed.body.error.message).toMatch(/eliminado/);
+    expect(removed.body.error.message).toMatch(/state ACTIVE/);
+  });
+
   it('borra lógicamente (204), luego 404, y un admin puede restaurar con state ACTIVE', async () => {
     const id = (await create()).body.data.id;
 

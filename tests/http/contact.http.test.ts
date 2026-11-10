@@ -116,6 +116,13 @@ describe('API /api/solicitudes-contacto', () => {
     expect(updated.body.data).toMatchObject({ empresa: 'ACME', montoEstimado: null });
     expect((await request(t.app).put(url).set(auth(owner.token)).send({})).status).toBe(400);
 
+    const patched = await request(t.app).patch(url).set(auth(owner.token)).send({ empresa: 'Beta' });
+    expect(patched.status).toBe(200);
+    expect(patched.body.data).toMatchObject({ empresa: 'Beta', montoEstimado: null });
+    expect((await request(t.app).patch(url).set(auth(owner.token)).send({})).status).toBe(400);
+    expect((await request(t.app).patch(url).set(auth(stranger)).send({ empresa: 'X' })).status).toBe(404);
+    expect((await request(t.app).patch(url).send({ empresa: 'X' })).status).toBe(401);
+
     expect((await request(t.app).delete(url).set(auth(owner.token))).status).toBe(204);
     expect((await request(t.app).get(url).set(auth(admin))).status).toBe(404);
   });
