@@ -74,6 +74,8 @@ Las tablas de la base usan nombres en español: `usuarios`, `elementos_catalogo`
 | GET | `/api/interacciones?currentPage=1&limit=10&type=formulario-exportaciones` | Solo admin; filtro por tipo, paginado |
 | GET, PUT, DELETE | `/api/interacciones/:id` | Propietario o admin |
 
+El registro y el login responden con `{ data: { user, token } }`. El token es un JWT con claims `id`, `role` y `exp`, firmado con `JWT_SECRET` y la duración configurada por `JWT_EXPIRES_IN`; ninguna respuesta incluye la contraseña ni su hash. Un correo ya registrado responde `409`; las credenciales inválidas de login responden `401` con un mensaje genérico.
+
 Las rutas antiguas singulares (`/api/catalogo`, `/api/contacto` y `/api/interaccion`) siguen disponibles como alias de compatibilidad. Los listados paginados incluyen `total`, `currentPage`, `limit` y `totalPages` dentro de `pagination` (además de los alias `page` y `pageSize`). Las actualizaciones parciales usan PUT y responden `200`; las creaciones `201`; los borrados `204`; las validaciones `400`; la falta de autenticación `401`; y la falta de permisos `403` (los recursos fuera de propiedad responden `404`).
 
 El registro siempre asigna el rol `USER`; el cliente no puede otorgarse permisos de administrador. Las interacciones toman el ID del usuario autenticado, nunca del cuerpo de la petición, y quedan vinculadas por llaves foráneas al usuario y al elemento del catálogo elegido. El login devuelve un JWT con los claims `id` y `role`; envíalo como `Authorization: Bearer <token>`. Para mantener compatibilidad temporal, la API también puede leer tokens anteriores que usaban `sub`.

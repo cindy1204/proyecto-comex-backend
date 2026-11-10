@@ -20,7 +20,7 @@ export class AuthService {
       email: input.email,
       passwordHash: await this.passwords.hash(input.password),
     });
-    return this.toPublicUser(user);
+    return this.createSession(user);
   }
 
   async registerAdmin(input: { name: string; email: string; password: string }) {
@@ -42,8 +42,7 @@ export class AuthService {
       throw new ApplicationError(401, 'INVALID_CREDENTIALS', 'Correo o contraseña incorrectos.');
     }
 
-    const identity = { id: user.id, role: user.role };
-    return { token: this.tokens.sign(identity), user: this.toPublicUser(user) };
+    return this.createSession(user);
   }
 
   authenticate(token: string): AuthenticatedUser {
@@ -70,6 +69,19 @@ export class AuthService {
       email: user.email,
       role: user.role,
       createdAt: user.createdAt,
+    };
+  }
+
+  private createSession(user: {
+    id: string;
+    name: string;
+    email: string;
+    role: UserRoleName;
+    createdAt: Date;
+  }) {
+    return {
+      token: this.tokens.sign({ id: user.id, role: user.role }),
+      user: this.toPublicUser(user),
     };
   }
 }
