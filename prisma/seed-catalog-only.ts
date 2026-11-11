@@ -81,7 +81,8 @@ async function seedCatalog(): Promise<void> {
 try {
   await seedCatalog();
 } catch (error) {
-  logger.error('Catalog-only seed failed.', error);
+  // Solo el mensaje: el stack no aporta nada al operador y puede exponer rutas internas.
+  logger.error(`Catalog-only seed failed: ${error instanceof Error ? error.message : String(error)}`);
   process.exitCode = 1;
 } finally {
   await prisma.$disconnect();
