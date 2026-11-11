@@ -38,7 +38,7 @@ tests/             unit/ (casos de uso, middlewares, JWT y repositorios Prisma c
 
 Los controladores no tocan Prisma: llaman a casos de uso, que dependen solo de las interfaces del dominio. Los tests inyectan repositorios en memoria, por lo que no requieren base de datos.
 
-Los borrados de catálogo, interacciones y solicitudes son lógicos (`state` = `REMOVED` y `deletedAt`). Los montos usan `Decimal(14,2)` en la base y viajan como cadena (`"1500.50"`) para no perder precisión.
+Los borrados de catálogo, interacciones y solicitudes son lógicos (`state` = `REMOVED` y `deletedAt`). Los montos usan `Decimal(14,2)` en la base y viajan como cadena (`"1500.50"`) para no perder precisión. Se aceptan solo decimales con punto, sin signo ni notación exponencial (`"1500.50"`, `"0.5"`); el frontend convierte la coma decimal antes de enviar.
 
 **Imágenes:** el almacenamiento S3 del proyecto es **Supabase Storage** (su API de objetos es compatible con S3). La imagen se envía en el mismo `POST`/`PUT` del catálogo, como `multipart/form-data` con el campo `image` (JPG, PNG o WebP, máximo 5 MB); el backend la sube al bucket y guarda la URL pública en `imageUrl`. No existe un endpoint de subida aparte y el cliente no puede enviar `imageUrl`.
 
@@ -94,7 +94,7 @@ Para crear únicamente el primer administrador en producción, configura `SEED_A
 
 ## Endpoints
 
-Todas las rutas están bajo `/api`, salvo `/health`. Los éxitos con cuerpo tienen la forma `{ "data": ... }`; los borrados responden 204 sin cuerpo. **PUT y PATCH son equivalentes**: ambos hacen una actualización parcial (basta enviar los campos que cambian, al menos uno) con las mismas validaciones y permisos; se conserva PUT por compatibilidad con el frontend. Los errores tienen la forma `{ "error": { "code", "message", "details"? } }` y los listados `{ "data": [...], "pagination": { "total", "currentPage", "limit", "totalPages" } }` (`page` por defecto 1; `limit` por defecto 10, máximo 50; valores inválidos responden 400). Los ids son `cuid`; un id inválido responde 400. Autenticación: `Authorization: Bearer <token>`.
+Todas las rutas están bajo `/api`, salvo `/health`. Los éxitos con cuerpo tienen la forma `{ "data": ... }`; los borrados responden 204 sin cuerpo. **PUT y PATCH son equivalentes**: ambos hacen una actualización parcial (basta enviar los campos que cambian, al menos uno) con las mismas validaciones y permisos; se conserva PUT por compatibilidad con el frontend. Los errores tienen la forma `{ "error": { "code", "message", "details"? } }` y los listados `{ "data": [...], "pagination": { "total", "currentPage", "limit", "totalPages" } }` (`page` por defecto 1; `limit` por defecto 10, máximo 50; valores inválidos responden 400; un parámetro vacío como `?page=` equivale a ausente). Los ids son `cuid`; un id inválido responde 400. Autenticación: `Authorization: Bearer <token>`.
 
 | Método      | Ruta                             | Acceso                                                                                                                                                    |
 | ----------- | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -174,6 +174,14 @@ Por ejemplo, en Render crea **New → Web Service**, conecta `cindy1204/proyecto
    ```
 
    La respuesta 201 trae `imageUrl` con la URL pública del archivo en el bucket. Sin las variables de Supabase la API responde 503 `IMAGE_STORAGE_NOT_CONFIGURED`.
+
+## Limitaciones conocidas
+
+- **Proxy de confianza:** la API declara `trust proxy 1` para leer la IP del cliente que reenvía el proxy (Render) en los límites de peticiones. Si se despliega detrás de más de un proxy, ajusta ese valor; con uno solo, el riesgo de falsear la IP es bajo.
+- **Límites por proceso:** los contadores de `express-rate-limit` viven en memoria. Con varias instancias, cada una cuenta por separado.
+- **Imagen opcional:** al crear un numeral la imagen es opcional. El soporte de subida existe; no se exige una imagen por numeral.
+- **Almacenamiento no verificado con credenciales reales:** la subida a Supabase Storage está implementada y cubierta con un almacenamiento simulado, pero no se probó con un proyecto de Supabase real.
+- **Despliegue pendiente:** las URLs y el proyecto de Supabase de la tabla de enlaces están por confirmar.
 
 ## Uso de inteligencia artificial
 
