@@ -5,7 +5,7 @@ const requiredText = (max: number) => z.string().trim().min(1).max(max);
 const optionalText = (max: number) => z.string().max(max);
 const amount = z
   .string()
-  .regex(/^(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/)
+  .regex(/^(?:\d+\.?\d*|\.\d+)$/)
   .refine((value) => Number.isFinite(Number(value)) && Number(value) >= 0);
 
 const commonFields = {

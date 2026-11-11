@@ -75,6 +75,7 @@ describe('InteractionsUseCase', () => {
   it.each([
     ['falta un campo obligatorio', { nombreImportador: undefined }],
     ['un monto no es numérico', { valorFob: 'abc' }],
+    ['un monto usa notación exponencial', { valorFob: '2e3' }],
     ['la moneda no es un código de 3 letras', { monedaNegociacion: 'DOLAR' }],
     ['llega un campo desconocido', { extra: 'x' }],
   ])('rechaza el formulario cuando %s', async (_case, overrides) => {

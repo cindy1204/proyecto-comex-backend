@@ -41,20 +41,21 @@ export const idParamsSchema = z.object({ id: idSchema });
 export const optionalQuery = <T extends z.ZodType>(schema: T) =>
   z.preprocess((value) => (value === '' ? undefined : value), schema.optional());
 
+/** Entero positivo con valor por defecto; `?page=` vacío se trata como ausente, igual que las fechas. */
 const positiveInt = (name: string, fallback: number, max: number) =>
-  z
-    .string()
-    .regex(/^\d+$/, `${name} debe ser un entero mayor o igual a 1.`)
-    .transform(Number)
-    .pipe(
-      z
-        .number()
-        .int()
-        .min(1, `${name} debe ser un entero mayor o igual a 1.`)
-        .max(max, `${name} no puede ser mayor a ${max}.`),
-    )
-    .optional()
-    .transform((value) => value ?? fallback);
+  optionalQuery(
+    z
+      .string()
+      .regex(/^\d+$/, `${name} debe ser un entero mayor o igual a 1.`)
+      .transform(Number)
+      .pipe(
+        z
+          .number()
+          .int()
+          .min(1, `${name} debe ser un entero mayor o igual a 1.`)
+          .max(max, `${name} no puede ser mayor a ${max}.`),
+      ),
+  ).transform((value) => value ?? fallback);
 
 export const paginationShape = {
   page: positiveInt('page', DEFAULT_PAGE, 1_000_000),

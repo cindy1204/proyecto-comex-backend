@@ -258,6 +258,13 @@ describe('API /api/catalogos', () => {
     expect(response.body.error.code).toBe('VALIDATION_ERROR');
   });
 
+  it('trata page y limit vacíos como ausentes', async () => {
+    const response = await request(t.app).get('/api/catalogos?page=&limit=');
+
+    expect(response.status).toBe(200);
+    expect(response.body.pagination.currentPage).toBe(1);
+  });
+
   it('responde 400 con un id que no es cuid y 404 con uno inexistente', async () => {
     const invalid = await request(t.app).get('/api/catalogos/no-es-un-id');
     const missing = await request(t.app).get('/api/catalogos/c000000000000000000000000');
