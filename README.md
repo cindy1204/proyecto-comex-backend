@@ -4,23 +4,22 @@ API REST de comercio exterior hecha con Node.js, Express 5, TypeScript, Prisma 6
 
 ## Enlaces del proyecto
 
-| Recurso                           | Enlace                    |
-| --------------------------------- | ------------------------- |
-| Repositorio del backend           | `https://...` (COMPLETAR) |
-| Repositorio del frontend          | `https://...` (COMPLETAR) |
-| Backend desplegado (API)          | `https://...` (COMPLETAR) |
-| Frontend desplegado               | `https://...` (COMPLETAR) |
-| Base de datos / proyecto Supabase | `https://...` (COMPLETAR) |
-| Video o presentación (opcional)   | `https://...` (COMPLETAR) |
+| Recurso                           | Enlace                                               |
+| --------------------------------- | ---------------------------------------------------- |
+| Repositorio del backend           | https://github.com/cindy1204/proyecto-comex-backend  |
+| Repositorio del frontend          | https://github.com/cindy1204/proyecto-comex-frontend |
+| Backend desplegado (API)          | Pendiente del despliegue                             |
+| Frontend desplegado               | Pendiente del primer despliegue en Vercel            |
+| Base de datos / proyecto Supabase | Pendiente de confirmar con el equipo                 |
 
 ## Reparto del trabajo
 
-| Integrante           | Responsabilidad                                     |
-| -------------------- | --------------------------------------------------- |
-| COMPLETAR (nombre 1) | COMPLETAR (por ejemplo, autenticación y roles)      |
-| COMPLETAR (nombre 2) | COMPLETAR (por ejemplo, catálogo e imágenes)        |
-| COMPLETAR (nombre 3) | COMPLETAR (por ejemplo, interacciones y contacto)   |
-| COMPLETAR (nombre 4) | COMPLETAR (por ejemplo, pruebas, lint y despliegue) |
+| Componente | Responsabilidades                                                                                                                                                               |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Frontend   | Interfaz Next.js, navegación, autenticación en cliente, formularios, catálogo, solicitudes, experiencia adaptable y descarga de los formularios oficiales diligenciados en PDF. |
+| Backend    | API REST, autenticación y roles, validación, persistencia PostgreSQL/Prisma, migraciones, seed de prueba, catálogo e integración con el frontend.                               |
+
+Esta tabla describe la división técnica por repositorio; el equipo puede agregar los nombres de quienes asumieron cada parte.
 
 ## Arquitectura
 
@@ -59,6 +58,8 @@ npm run dev                 # http://localhost:3001  (verifica GET /health)
 ```
 
 Para producción, consulta la sección [Despliegue](#despliegue).
+
+`.env.example` documenta las variables requeridas y no contiene secretos. Copia el archivo a `.env` para desarrollo; nunca subas `.env` ni las credenciales de producción al repositorio.
 
 ## Variables de entorno
 
@@ -149,7 +150,10 @@ Pasos para un servicio Node (Render, Railway u otro) con la base de datos en Sup
 3. **Start command:** `npm start` (ejecuta `node dist/server.js`).
 4. **Base de datos Supabase:** en Project Settings > Database > Connection string copia el **pooler** (puerto 6543, con `?pgbouncer=true`) en `DATABASE_URL` y la **conexión directa** (puerto 5432) en `DIRECT_URL`. Prisma usa `DIRECT_URL` para migrar, porque las migraciones no funcionan a través del pooler; la API usa `DATABASE_URL`. En local ambas son iguales.
 5. **Seed (`npm run db:seed`):** córrelo una sola vez tras la primera migración, desde tu equipo con `DATABASE_URL` y `DIRECT_URL` apuntando a la base de Supabase, o como comando puntual en el servicio (requiere las `devDependencies`, por eso el build usa `--include=dev`). Define `SEED_*` con valores propios: sin ellos crea las cuentas de demostración públicas de este README. Es idempotente, pero no es parte del build ni del arranque.
-6. **Verificación:** `GET <URL del backend>/health` debe responder `{ "status": "ok" }`.
+6. **URL pública:** al crear el servicio web, el proveedor (por ejemplo, Render) asigna un dominio HTTPS. Copia esa URL base en `NEXT_PUBLIC_API_HOST` del frontend y añade el dominio exacto de Vercel a `CORS_ORIGINS` del backend.
+7. **Verificación:** `GET <URL del backend>/health` debe responder `{ "status": "ok" }`.
+
+Por ejemplo, en Render crea **New → Web Service**, conecta `cindy1204/proyecto-comex-backend` y selecciona la rama que el equipo decidió publicar. Configura el comando de compilación indicado arriba y `npm start` como comando de inicio; Render muestra la URL del servicio al terminar el despliegue. Configura allí los secretos y conexiones de producción. No copies el `.env` local al servicio ni al repositorio.
 
 ### Bucket de imágenes en Supabase Storage
 
