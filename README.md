@@ -88,6 +88,8 @@ El seed siempre crea un administrador y un usuario, y se puede repetir sin dupli
 
 Son cuentas de demostración: en cualquier entorno compartido o público define `SEED_*` con valores propios. Si el correo ya existe, el seed no cambia su contraseña ni su rol. El seed también carga los numerales de `prisma/data/catalogo.json` y los de servicios de `prisma/data/servicios.json` (transcritos del Anexo 3 del DCIP-83, actualizado al 1 de septiembre de 2021; confirma su vigencia antes de usarlos en una operación real).
 
+Para poblar únicamente el catálogo sin crear ni modificar usuarios, ejecuta `npm run db:seed:catalog-only`. Antes, define `DATABASE_URL` y `DIRECT_URL` con la URL externa de la base de producción de Render y `CATALOG_SEED_TARGET=production`. El script inserta numerales faltantes, omite duplicados y rechaza URLs locales; no imprime las URLs ni accede a la tabla de usuarios.
+
 ## Endpoints
 
 Todas las rutas están bajo `/api`, salvo `/health`. Los éxitos con cuerpo tienen la forma `{ "data": ... }`; los borrados responden 204 sin cuerpo. **PUT y PATCH son equivalentes**: ambos hacen una actualización parcial (basta enviar los campos que cambian, al menos uno) con las mismas validaciones y permisos; se conserva PUT por compatibilidad con el frontend. Los errores tienen la forma `{ "error": { "code", "message", "details"? } }` y los listados `{ "data": [...], "pagination": { "total", "currentPage", "limit", "totalPages" } }` (`page` por defecto 1; `limit` por defecto 10, máximo 50; valores inválidos responden 400). Los ids son `cuid`; un id inválido responde 400. Autenticación: `Authorization: Bearer <token>`.

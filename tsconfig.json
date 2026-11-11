@@ -13,5 +13,5 @@
     "noFallthroughCasesInSwitch": true,
     "types": ["node"]
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "prisma/seed.ts", "vitest.config.ts"]
+  "include": ["src/**/*.ts", "tests/**/*.ts", "prisma/seed.ts", "prisma/seed-catalog-only.ts", "vitest.config.ts"]
 }
