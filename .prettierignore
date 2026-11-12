@@ -4,3 +4,4 @@ coverage
 package-lock.json
 prisma/data
 prisma/migrations
+tests/golden/

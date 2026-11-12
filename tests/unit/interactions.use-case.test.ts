@@ -220,8 +220,17 @@ describe('declaraciones de servicios, inversiones y endeudamiento', () => {
     await expect(interactions.update(owner, created.id, { data: { numeralCambiario: '1010' } })).rejects.toMatchObject({
       status: 400,
     });
-    const changed = await interactions.update(owner, created.id, { data: { tasaCambioDolares: '4100' } });
-    expect(changed.data).toMatchObject({ tasaCambioDolares: '4100', numeralCambiario: '4025' });
+    await expect(
+      interactions.update(owner, created.id, { data: { tasaCambioDolares: '4100' } }),
+    ).rejects.toBeInstanceOf(ZodError);
+    const changed = await interactions.update(owner, created.id, {
+      data: { tasaCambioDolares: '4100', valorTotalDolares: '4100000' },
+    });
+    expect(changed.data).toMatchObject({
+      tasaCambioDolares: '4100',
+      valorTotalDolares: '4100000',
+      numeralCambiario: '4025',
+    });
   });
 
   it('lista las declaraciones filtradas por tipo', async () => {

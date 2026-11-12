@@ -1,11 +1,14 @@
-/** Cuerpos `data` válidos para los formularios; los tests los sobrescriben campo a campo. */
+/**
+ * Cuerpos `data` válidos para los formularios; los tests los sobrescriben campo a campo.
+ * El total cumple total = valor × tasa (1000 × 4000), con la tasa de cada fixture.
+ */
 const common = {
   fechaTramite: '2026-03-15',
   tipoIdentificacion: 'NIT',
-  identificacion: '900123456',
+  identificacion: '900123456-8',
   monedaNegociacion: 'USD',
   valorMonedaNegociacion: '1000',
-  valorTotalDolares: '1000',
+  valorTotalDolares: '4000000',
   nombreDeclarante: 'Ana Pérez',
 };
 
