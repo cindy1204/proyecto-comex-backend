@@ -100,6 +100,8 @@ Las contraseñas se comparten en privado con el equipo evaluador y no se publica
 - **Contrato OpenAPI:** [docs/openapi.yaml](docs/openapi.yaml). Es la fuente de verdad de rutas, parámetros, cuerpos, respuestas y errores. También se sirve como YAML en `/api/docs/openapi.yaml`.
 - **Validar el contrato:** `npx @redocly/cli lint docs/openapi.yaml`.
 
+![Swagger UI en producción](docs/img/swagger-ui.png)
+
 Swagger UI se monta antes de helmet y CORS porque necesita scripts en línea. Por eso sus respuestas no llevan las cabeceras de seguridad de helmet (ver _Limitaciones conocidas_).
 
 ## Reglas de validación de los formularios
