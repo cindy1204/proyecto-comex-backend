@@ -58,14 +58,22 @@ describe('API /api/auth', () => {
     await request(t.app).post('/api/auth/register').send(body);
 
     const ok = await request(t.app).post('/api/auth/login').send({ email: body.email, password: body.password });
-    const bad = await request(t.app).post('/api/auth/login').send({ email: body.email, password: 'incorrecta' });
+    const wrongPassword = await request(t.app)
+      .post('/api/auth/login')
+      .send({ email: body.email, password: 'incorrecta' });
+    const unknownEmail = await request(t.app)
+      .post('/api/auth/login')
+      .send({ email: 'inexistente@test.com', password: 'incorrecta' });
 
     expect(ok.status).toBe(200);
     expect(ok.body.data).toEqual(expect.objectContaining({ token: expect.any(String), expiresIn: expect.any(Number) }));
-    expect(bad.status).toBe(401);
-    expect(bad.body.error.message).toBe('Credenciales inválidas.');
+    expect(wrongPassword.status).toBe(401);
+    expect(wrongPassword.body).toEqual(unknownEmail.body);
+    expect(unknownEmail.status).toBe(401);
+    expect(unknownEmail.body.error).toEqual({ code: 'INVALID_CREDENTIALS', message: 'Credenciales inválidas.' });
     expectNoHashLeak(ok.body);
-    expectNoHashLeak(bad.body);
+    expectNoHashLeak(wrongPassword.body);
+    expectNoHashLeak(unknownEmail.body);
   });
 
   it('GET /me devuelve el usuario y exige token', async () => {
