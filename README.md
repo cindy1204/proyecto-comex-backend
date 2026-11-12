@@ -19,7 +19,7 @@ API REST de comercio exterior hecha con Node.js, Express 5, TypeScript, Prisma 6
 | Frontend   | Interfaz Next.js, navegación, autenticación en cliente, formularios, catálogo, solicitudes, experiencia adaptable y descarga de los formularios oficiales diligenciados en PDF. |
 | Backend    | API REST, autenticación y roles, validación, persistencia PostgreSQL/Prisma, migraciones, seed de prueba, catálogo e integración con el frontend.                               |
 
-Esta tabla describe la división técnica por repositorio; el equipo puede agregar los nombres de quienes asumieron cada parte.
+Esta tabla describe la división técnica por repositorio. Integrantes del equipo: Miguel Cárdenas y Cindy Bohorquez.
 
 ## Arquitectura
 
