@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
@@ -105,4 +105,14 @@ model ContactRequest {
   @@index([state, tipoProducto, createdAt])
   @@index([userId, state, createdAt])
   @@map("solicitudes_contacto")
+}
+
+/// Imágenes guardadas en la base de datos cuando no hay Supabase Storage (fallback).
+model StoredFile {
+  id        String   @id @default(cuid())
+  mimeType  String   @map("mime_type")
+  content   Bytes    @db.ByteA
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("archivos_almacenados")
 }

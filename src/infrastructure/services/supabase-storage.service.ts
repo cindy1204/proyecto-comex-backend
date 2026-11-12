@@ -53,7 +53,7 @@ export class SupabaseStorageService implements IFileStorage {
     if (error) logger.error('No se pudo borrar una imagen de Supabase Storage.', error);
   }
 
-  private isConfigured(): boolean {
+  isConfigured(): boolean {
     return Boolean(this.options.url && this.options.serviceRoleKey);
   }
 

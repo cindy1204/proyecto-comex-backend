@@ -2,9 +2,11 @@ import { AuthUseCase } from '../application/use-cases/auth.use-case.js';
 import { CatalogUseCase } from '../application/use-cases/catalog.use-case.js';
 import { ContactUseCase } from '../application/use-cases/contact.use-case.js';
 import { InteractionsUseCase } from '../application/use-cases/interactions.use-case.js';
+import { StoredFileUseCase } from '../application/use-cases/stored-file.use-case.js';
 import type { ICatalogRepository } from '../domain/repository/ICatalog.repository.js';
 import type { IContactRepository } from '../domain/repository/IContact.repository.js';
 import type { IInteractionRepository } from '../domain/repository/IInteraction.repository.js';
+import type { IStoredFileRepository } from '../domain/repository/IStoredFile.repository.js';
 import type { IUserRepository } from '../domain/repository/IUser.repository.js';
 import type { IFileStorage } from '../domain/services/IFileStorage.js';
 import type { IPasswordHasher } from '../domain/services/IPasswordHasher.js';
@@ -16,11 +18,15 @@ import { ContactPrismaRepository } from '../infrastructure/repository/contact.pr
 import { InteractionPrismaRepository } from '../infrastructure/repository/interaction.prisma.repository.js';
 import { UserPrismaRepository } from '../infrastructure/repository/user.prisma.repository.js';
 import { BcryptPasswordHasher } from '../infrastructure/services/bcrypt.service.js';
+import { DatabaseFileStorage } from '../infrastructure/services/database-storage.service.js';
 import { JwtTokenService } from '../infrastructure/services/jwt.service.js';
+import { RoutedFileStorage } from '../infrastructure/services/routed-storage.service.js';
 import { SupabaseStorageService } from '../infrastructure/services/supabase-storage.service.js';
+import { StoredFilePrismaRepository } from '../infrastructure/repository/stored-file.prisma.repository.js';
 import { AuthController } from './controllers/auth.controller.js';
 import { CatalogController } from './controllers/catalog.controller.js';
 import { ContactController } from './controllers/contact.controller.js';
+import { StoredFileController } from './controllers/stored-file.controller.js';
 import { InteractionsController } from './controllers/interactions.controller.js';
 import { createGuards, type Guards } from './middlewares/auth.middleware.js';
 
@@ -30,6 +36,7 @@ export interface Infrastructure {
   catalog: ICatalogRepository;
   interactions: IInteractionRepository;
   contacts: IContactRepository;
+  storedFiles: IStoredFileRepository;
   passwords: IPasswordHasher;
   tokens: ITokenService;
   files: IFileStorage;
@@ -44,6 +51,7 @@ export interface Container {
     catalog: CatalogController;
     interactions: InteractionsController;
     contact: ContactController;
+    storedFiles: StoredFileController;
   };
   checkDatabase: () => Promise<void>;
   shutdown: () => Promise<void>;
@@ -55,6 +63,7 @@ export function buildContainer(infra: Infrastructure, shutdown: () => Promise<vo
   const catalog = new CatalogUseCase(infra.catalog, infra.files);
   const interactions = new InteractionsUseCase(infra.catalog, infra.interactions);
   const contacts = new ContactUseCase(infra.contacts);
+  const storedFiles = new StoredFileUseCase(infra.storedFiles);
 
   return {
     guards: createGuards(auth),
@@ -63,15 +72,20 @@ export function buildContainer(infra: Infrastructure, shutdown: () => Promise<vo
       catalog: new CatalogController(catalog),
       interactions: new InteractionsController(interactions),
       contact: new ContactController(contacts),
+      storedFiles: new StoredFileController(storedFiles),
     },
     checkDatabase: infra.checkDatabase,
     shutdown,
   };
 }
 
-/** Contenedor de producción: Prisma, bcrypt, JWT y Supabase Storage. */
+/**
+ * Contenedor de producción: Prisma, bcrypt, JWT y almacenamiento de imágenes (Supabase si está
+ * configurado; si no, la base de datos).
+ */
 export function createContainer(config: AppConfig): Container {
   const prisma = createPrismaClient(config.databaseUrl);
+  const storedFiles = new StoredFilePrismaRepository(prisma);
 
   return buildContainer(
     {
@@ -79,9 +93,10 @@ export function createContainer(config: AppConfig): Container {
       catalog: new CatalogPrismaRepository(prisma),
       interactions: new InteractionPrismaRepository(prisma),
       contacts: new ContactPrismaRepository(prisma),
+      storedFiles,
       passwords: new BcryptPasswordHasher(),
       tokens: new JwtTokenService(config.jwtSecret, config.jwtExpiresInSeconds),
-      files: new SupabaseStorageService(config.supabase),
+      files: new RoutedFileStorage(new SupabaseStorageService(config.supabase), new DatabaseFileStorage(storedFiles)),
       checkDatabase: async () => {
         await prisma.$queryRaw`SELECT 1`;
       },

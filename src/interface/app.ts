@@ -10,6 +10,7 @@ import { createAuthRouter } from './routers/auth.router.js';
 import { createCatalogRouter } from './routers/catalog.router.js';
 import { createContactRouter } from './routers/contact.router.js';
 import { createInteractionsRouter } from './routers/interactions.router.js';
+import { createStoredFileRouter } from './routers/stored-file.router.js';
 
 export interface AppOptions {
   corsOrigins: string[];
@@ -54,6 +55,7 @@ export function createApp(container: Container, options: AppOptions): Express {
   app.use('/api/catalogos', createCatalogRouter(controllers.catalog, guards, limiters.upload));
   app.use('/api/interacciones', createInteractionsRouter(controllers.interactions, guards));
   app.use('/api/solicitudes-contacto', createContactRouter(controllers.contact, guards, limiters.contact));
+  app.use('/api/archivos', createStoredFileRouter(controllers.storedFiles));
 
   app.use(notFound);
   app.use(errorHandler);

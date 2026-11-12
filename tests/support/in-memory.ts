@@ -16,6 +16,11 @@ import type { AuthenticatedUser, NewUser, User } from '../../src/domain/models/u
 import type { CatalogFilter, ICatalogRepository } from '../../src/domain/repository/ICatalog.repository.js';
 import type { ContactFilter, IContactRepository } from '../../src/domain/repository/IContact.repository.js';
 import type { IInteractionRepository, InteractionFilter } from '../../src/domain/repository/IInteraction.repository.js';
+import type {
+  IStoredFileRepository,
+  NewStoredFile,
+  StoredFile,
+} from '../../src/domain/repository/IStoredFile.repository.js';
 import type { IUserRepository } from '../../src/domain/repository/IUser.repository.js';
 import { FileStorageError, type FileToUpload, type IFileStorage } from '../../src/domain/services/IFileStorage.js';
 import type { IPasswordHasher } from '../../src/domain/services/IPasswordHasher.js';
@@ -84,6 +89,24 @@ export class FakeFileStorage implements IFileStorage {
 
   async remove(url: string): Promise<void> {
     this.files.delete(url);
+  }
+}
+
+export class InMemoryStoredFileRepository implements IStoredFileRepository {
+  readonly files = new Map<string, StoredFile>();
+
+  async create(file: NewStoredFile): Promise<string> {
+    const id = newId();
+    this.files.set(id, { id, mimeType: file.mimeType, content: Buffer.from(file.content) });
+    return id;
+  }
+
+  async findById(id: string): Promise<StoredFile | null> {
+    return this.files.get(id) ?? null;
+  }
+
+  async delete(id: string): Promise<void> {
+    this.files.delete(id);
   }
 }
 
@@ -302,6 +325,7 @@ export function createInMemoryInfrastructure() {
     catalog,
     interactions: new InMemoryInteractionRepository(users, catalog),
     contacts: new InMemoryContactRepository(),
+    storedFiles: new InMemoryStoredFileRepository(),
     passwords: new FakePasswordHasher(),
     tokens: new FakeTokenService(),
     files: new FakeFileStorage(),
