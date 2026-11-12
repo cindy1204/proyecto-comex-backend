@@ -191,7 +191,7 @@ export class InMemoryCatalogRepository implements ICatalogRepository {
   }
 
   async remove(id: string): Promise<void> {
-    Object.assign(this.require(id), { state: 'REMOVED', deletedAt: new Date() });
+    Object.assign(this.require(id), { state: 'REMOVED', deletedAt: new Date(), imageUrl: null });
   }
 
   private require(id: string): CatalogItem {

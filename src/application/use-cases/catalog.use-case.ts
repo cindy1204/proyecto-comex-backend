@@ -96,10 +96,15 @@ export class CatalogUseCase {
     }
   }
 
-  /** Borrado lógico: un ítem ya removido responde 404. */
+  /**
+   * Borrado lógico: un ítem ya removido responde 404. La imagen se purga del almacenamiento antes
+   * de marcar el ítem: si la escritura falla, un reintento completa el borrado sin dejar archivos
+   * públicos huérfanos. La restauración no recupera la imagen; hay que volver a subirla.
+   */
   async remove(id: string): Promise<void> {
     const item = await this.requireItem(id);
     if (item.state === 'REMOVED') throw new NotFoundError('El numeral no existe.');
+    if (item.imageUrl) await this.files.remove(item.imageUrl);
     await this.catalog.remove(id);
   }
 

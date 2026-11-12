@@ -81,7 +81,7 @@ export class CatalogPrismaRepository implements ICatalogRepository {
   async remove(id: string): Promise<void> {
     await this.prisma.catalogItem.update({
       where: { id },
-      data: { state: 'REMOVED', deletedAt: new Date() },
+      data: { state: 'REMOVED', deletedAt: new Date(), imageUrl: null },
     });
   }
 }

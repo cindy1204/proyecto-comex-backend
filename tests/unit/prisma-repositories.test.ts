@@ -204,7 +204,7 @@ describe('CatalogPrismaRepository (PrismaClient simulado)', () => {
 
     expect(fake.prisma.catalogItem.update).toHaveBeenCalledWith({
       where: { id: 'c1' },
-      data: { state: 'REMOVED', deletedAt: expect.any(Date) },
+      data: { state: 'REMOVED', deletedAt: expect.any(Date), imageUrl: null },
     });
   });
 });

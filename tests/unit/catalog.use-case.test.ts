@@ -126,6 +126,35 @@ describe('CatalogUseCase', () => {
     await expect(catalog.getById(created.id, ADMIN)).resolves.toMatchObject({ state: 'REMOVED' });
   });
 
+  it('al eliminar purga la imagen del almacenamiento y el numeral queda sin imageUrl', async () => {
+    const created = await catalog.create(baseItem, png());
+    expect(infra.files.files.size).toBe(1);
+
+    await catalog.remove(created.id);
+
+    expect(infra.files.files.size).toBe(0);
+    expect(infra.catalog.items[0]).toMatchObject({ state: 'REMOVED', imageUrl: null });
+  });
+
+  it('restaurar un numeral eliminado no reaparece con la imagen purgada', async () => {
+    const created = await catalog.create(baseItem, png());
+    await catalog.remove(created.id);
+
+    const restored = await catalog.update(created.id, { state: 'ACTIVE' });
+
+    expect(restored).toMatchObject({ state: 'ACTIVE', imageUrl: null });
+    expect(infra.files.files.size).toBe(0);
+  });
+
+  it('eliminar un numeral sin imagen no toca el almacenamiento', async () => {
+    const created = await catalog.create(baseItem);
+
+    await catalog.remove(created.id);
+
+    expect(infra.files.files.size).toBe(0);
+    expect(infra.catalog.items[0]).toMatchObject({ state: 'REMOVED', imageUrl: null });
+  });
+
   it('un administrador restaura un numeral con state ACTIVE', async () => {
     const created = await catalog.create(baseItem);
     await catalog.remove(created.id);
