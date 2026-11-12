@@ -1,6 +1,6 @@
 # API de ColComex (backend)
 
-API REST de comercio exterior hecha con Node.js, Express 5, TypeScript, Prisma 6 y PostgreSQL. Expone el catálogo de numerales cambiarios, las interacciones (formularios de importación y exportación) y las solicitudes de contacto, con autenticación JWT y roles `ADMIN` y `USER`. El frontend vive en otro repositorio ([proyecto-comex-frontend](https://github.com/cindy1204/proyecto-comex-frontend)) y consume esta API.
+API REST de comercio exterior hecha con Node.js, Express 5, TypeScript, Prisma 6 y PostgreSQL. Expone el catálogo de numerales cambiarios, las interacciones (formularios de importación, exportación, servicios, inversiones y endeudamiento) y las solicitudes de contacto, con autenticación JWT y roles `ADMIN` y `USER`. El frontend vive en otro repositorio ([proyecto-comex-frontend](https://github.com/cindy1204/proyecto-comex-frontend)) y consume esta API.
 
 ## Enlaces del proyecto
 
@@ -120,6 +120,8 @@ Todas las rutas están bajo `/api`, salvo `/health`. Los éxitos con cuerpo tien
 | GET         | `/api/solicitudes-contacto/:id`  | Propietario o admin                                                                                                                                       |
 | PUT y PATCH | `/api/solicitudes-contacto/:id`  | Propietario o admin                                                                                                                                       |
 | DELETE      | `/api/solicitudes-contacto/:id`  | Propietario o admin; borrado lógico 204                                                                                                                   |
+
+Tipos de interacción (campo `type`, valores en kebab-case): `formulario-importaciones`, `formulario-exportaciones`, `formulario-servicios`, `formulario-inversiones` y `formulario-endeudamiento`. Los tres últimos son declaraciones de cambio: su `data` sigue un contrato estricto (`declarationDataSchema` en `src/application/interaction-data.ts`) con `fechaTramite`, `tipoIdentificacion`, `identificacion`, `nombreTitular`, `monedaNegociacion`, `valorMonedaNegociacion`, `tasaCambioDolares`, `valorTotalDolares`, `observaciones` (opcional), `nombreDeclarante` y `numeralCambiario`; cualquier otra clave responde 400. Ese conjunto de campos es un núcleo común pendiente de confirmar con el Anexo 1 de la DCIP-83, que no lo especifica por familia. Con `PUT`, cambiar una declaración a otra familia de declaración es válido siempre que el numeral pertenezca a la categoría nueva; si no, responde 400. Cambiar una declaración a importación o exportación se rechaza, porque sus campos no coinciden. La migración `20261111120000_interaction_type_declaraciones` añade los tres valores al enum de PostgreSQL. Se verificó en una base PostgreSQL 16 local desechable (aplica limpia y sin deriva frente a `schema.prisma`); **no se ha aplicado a ninguna base compartida ni de producción**.
 
 Códigos: 400 validación o JSON/ruta mal formados, 401 sin token o token inválido (incluido el de un usuario eliminado), 403 sin permiso u origen CORS no permitido, 404 no existe o es ajeno, 409 duplicado o referencia en conflicto, 413 cuerpo mayor a 1 MB o imagen mayor a 5 MB, 415 imagen que no es JPG/PNG/WebP, 429 límite de peticiones, 502/503 fallo o falta de configuración del almacenamiento de imágenes. Ningún error expone trazas.
 

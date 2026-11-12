@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { InteractionsUseCase } from '../../src/application/use-cases/interactions.use-case.js';
 import type { AuthenticatedUser } from '../../src/domain/models/user.model.js';
 import { createInMemoryInfrastructure } from '../support/in-memory.js';
-import { exportData, importData } from '../support/interaction-data.js';
+import { declarationData, exportData, importData } from '../support/interaction-data.js';
 
 describe('InteractionsUseCase', () => {
   let infra: ReturnType<typeof createInMemoryInfrastructure>;
@@ -143,5 +143,100 @@ describe('InteractionsUseCase', () => {
     expect(mineByType.pagination.total).toBe(1);
     expect(all.pagination.total).toBe(3);
     expect(byUser.pagination.total).toBe(1);
+  });
+});
+
+describe('declaraciones de servicios, inversiones y endeudamiento', () => {
+  let infra: ReturnType<typeof createInMemoryInfrastructure>;
+  let interactions: InteractionsUseCase;
+  let owner: AuthenticatedUser;
+
+  beforeEach(async () => {
+    infra = createInMemoryInfrastructure();
+    interactions = new InteractionsUseCase(infra.catalog, infra.interactions);
+    const user = await infra.users.create({ name: 'U', email: 'decl@test.com', passwordHash: 'x', role: 'user' });
+    owner = { id: user.id, role: user.role };
+    const numerales = [
+      { category: 'servicios', direction: 'INGRESOS', code: '1601', title: 'Otros conceptos' },
+      { category: 'inversiones', direction: 'INGRESOS', code: '4025', title: 'Inversión' },
+      { category: 'endeudamiento', direction: 'INGRESOS', code: '4020', title: 'Crédito' },
+      { category: 'importaciones', direction: 'EGRESOS', code: '2010', title: 'Importación' },
+      { category: 'exportaciones', direction: 'INGRESOS', code: '1010', title: 'Exportación' },
+    ] as const;
+    for (const item of numerales) {
+      await infra.catalog.create({ ...item, description: 'd', note: null, imageUrl: null });
+    }
+  });
+
+  it.each([
+    ['formulario-servicios', '1601', 'servicios'],
+    ['formulario-inversiones', '4025', 'inversiones'],
+    ['formulario-endeudamiento', '4020', 'endeudamiento'],
+  ] as const)('%s resuelve el numeral desde numeralCambiario dentro de su categoría', async (type, code, category) => {
+    const created = await interactions.create(owner, { type, data: declarationData({ numeralCambiario: code }) });
+
+    expect(created.type).toBe(type);
+    expect(created.catalogItem).toMatchObject({ category, code });
+  });
+
+  it.each([
+    ['servicios con un numeral de inversiones', 'formulario-servicios', '4025'],
+    ['inversiones con un numeral de exportaciones', 'formulario-inversiones', '1010'],
+    ['endeudamiento con un numeral de importaciones', 'formulario-endeudamiento', '2010'],
+    ['endeudamiento con un numeral que no existe', 'formulario-endeudamiento', '9999'],
+  ] as const)('responde 400 cuando %s', async (_case, type, numeral) => {
+    await expect(
+      interactions.create(owner, { type, data: declarationData({ numeralCambiario: numeral }) }),
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it.each([
+    ['falta el nombre del titular', { nombreTitular: undefined }],
+    ['la tasa no es numérica', { tasaCambioDolares: 'cuatro mil' }],
+    ['la moneda no es un código de 3 letras', { monedaNegociacion: 'DOLAR' }],
+    ['llega un campo de importaciones', { numeralOperacion: '2010' }],
+    ['llega un campo de exportaciones', { totalGastosExportacion: '1' }],
+    ['el numeral llega vacío', { numeralCambiario: '   ' }],
+  ])('rechaza la declaración de servicios cuando %s', async (_case, overrides) => {
+    await expect(
+      interactions.create(owner, { type: 'formulario-servicios', data: declarationData(overrides) }),
+    ).rejects.toBeInstanceOf(ZodError);
+  });
+
+  it('no permite cambiar a otra familia reutilizando los datos de una importación', async () => {
+    const created = await interactions.create(owner, { type: 'formulario-importaciones', data: importData() });
+
+    await expect(
+      interactions.update(owner, created.id, { type: 'formulario-servicios', data: declarationData() }),
+    ).rejects.toBeInstanceOf(ZodError);
+  });
+
+  it('actualiza una declaración de inversiones y vuelve a validar su numeral', async () => {
+    const created = await interactions.create(owner, {
+      type: 'formulario-inversiones',
+      data: declarationData({ numeralCambiario: '4025' }),
+    });
+
+    await expect(interactions.update(owner, created.id, { data: { numeralCambiario: '1010' } })).rejects.toMatchObject({
+      status: 400,
+    });
+    const changed = await interactions.update(owner, created.id, { data: { tasaCambioDolares: '4100' } });
+    expect(changed.data).toMatchObject({ tasaCambioDolares: '4100', numeralCambiario: '4025' });
+  });
+
+  it('lista las declaraciones filtradas por tipo', async () => {
+    await interactions.create(owner, { type: 'formulario-servicios', data: declarationData() });
+    await interactions.create(owner, {
+      type: 'formulario-inversiones',
+      data: declarationData({ numeralCambiario: '4025' }),
+    });
+
+    const services = await interactions.listMine(owner, { page: 1, limit: 10, type: 'formulario-servicios' });
+    const investments = await interactions.listMine(owner, { page: 1, limit: 10, type: 'formulario-inversiones' });
+    const debts = await interactions.listMine(owner, { page: 1, limit: 10, type: 'formulario-endeudamiento' });
+
+    expect(services.pagination.total).toBe(1);
+    expect(investments.pagination.total).toBe(1);
+    expect(debts.pagination.total).toBe(0);
   });
 });

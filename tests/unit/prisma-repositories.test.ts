@@ -319,6 +319,18 @@ describe('InteractionPrismaRepository (PrismaClient simulado)', () => {
     expect(page.items[0]).toMatchObject({ id: 'i1', type: 'formulario-importaciones' });
   });
 
+  it.each([
+    ['formulario-servicios', 'FORMULARIO_SERVICIOS'],
+    ['formulario-inversiones', 'FORMULARIO_INVERSIONES'],
+    ['formulario-endeudamiento', 'FORMULARIO_ENDEUDAMIENTO'],
+  ] as const)('filtra %s con su valor del enum de base de datos', async (type, dbType) => {
+    await repository.list({ page: 1, limit: 5, type });
+
+    expect(fake.prisma.interaction.count).toHaveBeenLastCalledWith({
+      where: expect.objectContaining({ type: dbType }),
+    });
+  });
+
   it('findById ignora las interacciones eliminadas', async () => {
     fake.prisma.interaction.findFirst.mockResolvedValue(null);
 

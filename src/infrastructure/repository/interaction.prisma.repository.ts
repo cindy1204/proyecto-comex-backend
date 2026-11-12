@@ -14,11 +14,17 @@ import { createdAtRange } from './query-helpers.js';
 const TYPE_TO_DB: Record<InteractionType, PrismaInteractionType> = {
   'formulario-importaciones': PrismaInteractionType.FORMULARIO_IMPORTACIONES,
   'formulario-exportaciones': PrismaInteractionType.FORMULARIO_EXPORTACIONES,
+  'formulario-servicios': PrismaInteractionType.FORMULARIO_SERVICIOS,
+  'formulario-inversiones': PrismaInteractionType.FORMULARIO_INVERSIONES,
+  'formulario-endeudamiento': PrismaInteractionType.FORMULARIO_ENDEUDAMIENTO,
 };
 
 const TYPE_FROM_DB: Record<PrismaInteractionType, InteractionType> = {
   FORMULARIO_IMPORTACIONES: 'formulario-importaciones',
   FORMULARIO_EXPORTACIONES: 'formulario-exportaciones',
+  FORMULARIO_SERVICIOS: 'formulario-servicios',
+  FORMULARIO_INVERSIONES: 'formulario-inversiones',
+  FORMULARIO_ENDEUDAMIENTO: 'formulario-endeudamiento',
 };
 
 const include = {

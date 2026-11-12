@@ -35,3 +35,12 @@ export const exportData = (overrides: Record<string, unknown> = {}) => ({
   reintegroNetoCalculado: '1040.00',
   ...overrides,
 });
+
+/** Núcleo de datos mínimos compartido por servicios, inversiones y endeudamiento. */
+export const declarationData = (overrides: Record<string, unknown> = {}) => ({
+  ...common,
+  nombreTitular: 'Titular SAS',
+  tasaCambioDolares: '4000',
+  numeralCambiario: '1601',
+  ...overrides,
+});

@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { importData } from '../support/interaction-data.js';
+import { declarationData, importData } from '../support/interaction-data.js';
 import { createTestApp, type TestApp } from '../support/http-app.js';
 
 describe('API /api/interacciones', () => {
@@ -129,5 +129,44 @@ describe('API /api/interacciones', () => {
   it('responde 400 ante un id inválido y ante ?type desconocido', async () => {
     expect((await request(t.app).get('/api/interacciones/abc').set(auth(admin))).status).toBe(400);
     expect((await request(t.app).get('/api/interacciones/mias?type=x').set(auth(owner.token))).status).toBe(400);
+  });
+
+  it('acepta servicios, inversiones y endeudamiento con su numeral, y rechaza un numeral de otra familia', async () => {
+    const numerales = [
+      ['servicios', 'formulario-servicios', '1601'],
+      ['inversiones', 'formulario-inversiones', '4025'],
+      ['endeudamiento', 'formulario-endeudamiento', '4020'],
+    ] as const;
+    for (const [category, , code] of numerales) {
+      await t.infra.catalog.create({
+        category,
+        direction: 'INGRESOS',
+        code,
+        title: 'Numeral',
+        description: 'd',
+        note: null,
+        imageUrl: null,
+      });
+    }
+
+    const created = await Promise.all(
+      numerales.map(([, type, code]) =>
+        request(t.app)
+          .post('/api/interacciones')
+          .set(auth(owner.token))
+          .send({ type, data: declarationData({ numeralCambiario: code }) }),
+      ),
+    );
+    const mismatch = await request(t.app)
+      .post('/api/interacciones')
+      .set(auth(owner.token))
+      .send({ type: 'formulario-servicios', data: declarationData({ numeralCambiario: '4020' }) });
+    const services = await request(t.app)
+      .get('/api/interacciones/mias?type=formulario-servicios')
+      .set(auth(owner.token));
+
+    expect(created.map((response) => response.status)).toEqual([201, 201, 201]);
+    expect(mismatch.status).toBe(400);
+    expect(services.body.pagination.total).toBe(1);
   });
 });

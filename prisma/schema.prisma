@@ -26,6 +26,9 @@ enum RecordState {
 enum InteractionType {
   FORMULARIO_IMPORTACIONES @map("formulario-importaciones")
   FORMULARIO_EXPORTACIONES @map("formulario-exportaciones")
+  FORMULARIO_SERVICIOS     @map("formulario-servicios")
+  FORMULARIO_INVERSIONES   @map("formulario-inversiones")
+  FORMULARIO_ENDEUDAMIENTO @map("formulario-endeudamiento")
 }
 
 model User {

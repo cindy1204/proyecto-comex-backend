@@ -56,6 +56,26 @@ const exportDataSchema = z
   })
   .strict();
 
+// Servicios, inversiones y endeudamiento comparten el núcleo de datos mínimos de la
+// declaración de cambio. El anexo DCIP-83 no describe campos por familia, así que no se
+// inventan campos adicionales: cualquier campo específico exige confirmar la fuente oficial.
+const declarationDataSchema = z
+  .object({
+    ...commonFields,
+    nombreTitular: requiredText(250),
+    tasaCambioDolares: amount,
+    numeralCambiario: requiredText(40),
+  })
+  .strict();
+
+const DATA_SCHEMAS = {
+  'formulario-importaciones': importDataSchema,
+  'formulario-exportaciones': exportDataSchema,
+  'formulario-servicios': declarationDataSchema,
+  'formulario-inversiones': declarationDataSchema,
+  'formulario-endeudamiento': declarationDataSchema,
+} as const satisfies Record<InteractionType, { parse(data: unknown): unknown }>;
+
 export function parseInteractionData(type: InteractionType, data: unknown): InteractionData {
-  return type === 'formulario-importaciones' ? importDataSchema.parse(data) : exportDataSchema.parse(data);
+  return DATA_SCHEMAS[type].parse(data) as InteractionData;
 }

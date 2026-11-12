@@ -14,6 +14,9 @@ import { toPaginatedResponse, type PaginatedResponse } from '../pagination.js';
 const NUMERAL_SELECTION = {
   'formulario-importaciones': { category: 'importaciones', field: 'numeralOperacion' },
   'formulario-exportaciones': { category: 'exportaciones', field: 'numeralCambiario' },
+  'formulario-servicios': { category: 'servicios', field: 'numeralCambiario' },
+  'formulario-inversiones': { category: 'inversiones', field: 'numeralCambiario' },
+  'formulario-endeudamiento': { category: 'endeudamiento', field: 'numeralCambiario' },
 } as const;
 
 export interface InteractionListQuery extends PageRequest, DateRange {

@@ -1,6 +1,12 @@
 import type { RecordState } from './record-state.model.js';
 
-export const INTERACTION_TYPES = ['formulario-importaciones', 'formulario-exportaciones'] as const;
+export const INTERACTION_TYPES = [
+  'formulario-importaciones',
+  'formulario-exportaciones',
+  'formulario-servicios',
+  'formulario-inversiones',
+  'formulario-endeudamiento',
+] as const;
 
 export type InteractionType = (typeof INTERACTION_TYPES)[number];
 
