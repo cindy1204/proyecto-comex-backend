@@ -29,7 +29,7 @@ Arquitectura limpia en cuatro capas; las dependencias apuntan hacia el dominio y
 src/
   domain/          modelos, contratos de repositorio (I*.repository) y de servicios (hash, token, archivos)
   application/     casos de uso, errores de aplicación, paginación y mappers a la forma pública
-  infrastructure/  DTOs (Zod), repositorios Prisma, bcrypt, JWT, Supabase Storage, configuración, logger
+  infrastructure/  DTOs (Zod), repositorios Prisma, bcrypt, JWT, almacenamiento de imágenes (Supabase o PostgreSQL), configuración, logger
   interface/       controladores, routers Express, middlewares, app y contenedor de dependencias
   server.ts        arranque y apagado ordenado
 prisma/            schema, migraciones y seed (datos en prisma/data)
@@ -40,12 +40,12 @@ Los controladores no tocan Prisma: llaman a casos de uso, que dependen solo de l
 
 Los borrados de catálogo, interacciones y solicitudes son lógicos (`state` = `REMOVED` y `deletedAt`). Los montos usan `Decimal(14,2)` en la base y viajan como cadena (`"1500.50"`) para no perder precisión. Se aceptan solo decimales con punto, sin signo ni notación exponencial (`"1500.50"`, `"0.5"`); el frontend convierte la coma decimal antes de enviar.
 
-**Imágenes:** el almacenamiento S3 del proyecto es **Supabase Storage** (su API de objetos es compatible con S3). La imagen se envía en el mismo `POST`/`PUT` del catálogo, como `multipart/form-data` con el campo `image` (JPG, PNG o WebP, máximo 5 MB); el backend la sube al bucket y guarda la URL pública en `imageUrl`. No existe un endpoint de subida aparte y el cliente no puede enviar `imageUrl`.
+**Imágenes:** el almacenamiento preferido es **Supabase Storage** (su API de objetos es compatible con S3). La imagen se envía en el mismo `POST`/`PUT` del catálogo, como `multipart/form-data` con el campo `image` (JPG, PNG o WebP, máximo 5 MB); el backend la sube a Supabase Storage si está configurado o, si no, a la base de datos (fallback), y guarda la URL en `imageUrl`. No existe un endpoint de subida aparte y el cliente no puede enviar `imageUrl`.
 
 ## Requisitos
 
 - Node.js 20 o superior y npm.
-- PostgreSQL (local o administrado). Opcional: un proyecto de Supabase para las imágenes.
+- PostgreSQL (local o administrado). Opcional: un proyecto de Supabase para guardar las imágenes; sin él se usa la misma base de datos.
 
 ## Instalación y ejecución
 
@@ -73,7 +73,7 @@ Detalladas y comentadas en `.env.example`. La API no arranca si falta alguna obl
 | `JWT_EXPIRES_IN`                            | Sí          | Vigencia del token en segundos                                                                                                                       |
 | `PORT`                                      | No          | Puerto HTTP (3001)                                                                                                                                   |
 | `CORS_ORIGINS`                              | No          | Orígenes permitidos separados por comas; otros reciben 403                                                                                           |
-| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | No          | Habilitan la subida de imágenes; sin ellas la subida responde 503                                                                                    |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | No          | Habilitan la subida de imágenes a Supabase Storage; sin ellas las imágenes se guardan en PostgreSQL (ver _Almacenamiento de imágenes_)               |
 | `SUPABASE_STORAGE_BUCKET`                   | No          | Bucket público de imágenes (`catalogo`)                                                                                                              |
 | `SEED_ADMIN_*`, `SEED_USER_*`               | No          | `NAME`, `EMAIL` y `PASSWORD` de las cuentas del seed                                                                                                 |
 
@@ -107,6 +107,7 @@ Todas las rutas están bajo `/api`, salvo `/health`. Los éxitos con cuerpo tien
 | GET         | `/api/catalogos/:id`             | Público (los eliminados solo los ve un admin)                                                                                                             |
 | POST        | `/api/catalogos`                 | Solo admin; JSON o `multipart/form-data` con `image`; duplicado 409 (si el existente está eliminado, el mensaje indica restaurarlo con `state: "ACTIVE"`) |
 | PUT y PATCH | `/api/catalogos/:id`             | Solo admin; JSON o multipart; actualización parcial; `state: "ACTIVE"` restaura un numeral eliminado                                                      |
+| GET         | `/api/archivos/:id`              | Público; sirve una imagen guardada en la base de datos (fallback sin Supabase) con su `Content-Type` y caché de un día                                    |
 | DELETE      | `/api/catalogos/:id`             | Solo admin; borrado lógico 204 (si ya estaba eliminado, 404)                                                                                              |
 | POST        | `/api/interacciones`             | Autenticado                                                                                                                                               |
 | GET         | `/api/interacciones`             | Solo admin; filtros `type`, `userId`, fechas                                                                                                              |
@@ -123,7 +124,7 @@ Todas las rutas están bajo `/api`, salvo `/health`. Los éxitos con cuerpo tien
 
 Tipos de interacción (campo `type`, valores en kebab-case): `formulario-importaciones`, `formulario-exportaciones`, `formulario-servicios`, `formulario-inversiones` y `formulario-endeudamiento`. Los tres últimos son declaraciones de cambio: su `data` sigue un contrato estricto (`declarationDataSchema` en `src/application/interaction-data.ts`) con `fechaTramite`, `tipoIdentificacion`, `identificacion`, `nombreTitular`, `monedaNegociacion`, `valorMonedaNegociacion`, `tasaCambioDolares`, `valorTotalDolares`, `observaciones` (opcional), `nombreDeclarante` y `numeralCambiario`; cualquier otra clave responde 400. Ese conjunto de campos es un núcleo común pendiente de confirmar con el Anexo 1 de la DCIP-83, que no lo especifica por familia. Con `PUT`, cambiar una declaración a otra familia de declaración es válido siempre que el numeral pertenezca a la categoría nueva; si no, responde 400. Cambiar una declaración a importación o exportación se rechaza, porque sus campos no coinciden. La migración `20261111120000_interaction_type_declaraciones` añade los tres valores al enum de PostgreSQL. Se verificó en una base PostgreSQL 16 local desechable (aplica limpia y sin deriva frente a `schema.prisma`); **no se ha aplicado a ninguna base compartida ni de producción**.
 
-Códigos: 400 validación o JSON/ruta mal formados, 401 sin token o token inválido (incluido el de un usuario eliminado), 403 sin permiso u origen CORS no permitido, 404 no existe o es ajeno, 409 duplicado o referencia en conflicto, 413 cuerpo mayor a 1 MB o imagen mayor a 5 MB, 415 imagen que no es JPG/PNG/WebP, 429 límite de peticiones, 502/503 fallo o falta de configuración del almacenamiento de imágenes. Ningún error expone trazas.
+Códigos: 400 validación o JSON/ruta mal formados, 401 sin token o token inválido (incluido el de un usuario eliminado), 403 sin permiso u origen CORS no permitido, 404 no existe o es ajeno, 409 duplicado o referencia en conflicto, 413 cuerpo mayor a 1 MB o imagen mayor a 5 MB, 415 imagen que no es JPG/PNG/WebP, 429 límite de peticiones, 502 fallo del almacenamiento de imágenes. Ningún error expone trazas.
 
 Límites de peticiones (por proceso): 300 por 15 minutos en `/api`, 20 en autenticación, 10 en contacto y 60 por hora y por usuario en escrituras del catálogo (cargas de imagen). Los formularios multipart aceptan como máximo un archivo de 5 MB, 10 campos de texto y 40 000 bytes por campo.
 
@@ -144,7 +145,7 @@ Las pruebas usan repositorios en memoria, así que no necesitan PostgreSQL ni Su
 
 Pasos para un servicio Node (Render, Railway u otro) con la base de datos en Supabase. No guardes secretos en GitHub: las variables se definen en el panel del servicio.
 
-1. **Variables del servicio:** `DATABASE_URL`, `DIRECT_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `CORS_ORIGINS` (con el dominio del frontend desplegado) y, si habilitas imágenes, `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` (opcionalmente `SUPABASE_STORAGE_BUCKET`). `PORT` suele inyectarlo la plataforma.
+1. **Variables del servicio:** `DATABASE_URL`, `DIRECT_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `CORS_ORIGINS` (con el dominio del frontend desplegado) y, si habilitas imágenes, `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` (opcionalmente `SUPABASE_STORAGE_BUCKET`) si quieres las imágenes en Supabase; si no, no hace falta nada más para las imágenes. `PORT` suele inyectarlo la plataforma.
 2. **Build command:**
 
    ```bash
@@ -161,7 +162,9 @@ Pasos para un servicio Node (Render, Railway u otro) con la base de datos en Sup
 
 Por ejemplo, en Render crea **New → Web Service**, conecta `cindy1204/proyecto-comex-backend` y selecciona la rama que el equipo decidió publicar. Configura el comando de compilación indicado arriba y `npm start` como comando de inicio; Render muestra la URL del servicio al terminar el despliegue. Configura allí los secretos y conexiones de producción. No copies el `.env` local al servicio ni al repositorio.
 
-### Bucket de imágenes en Supabase Storage
+### Almacenamiento de imágenes
+
+Supabase es opcional. Con `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` definidas, las imágenes van al bucket de Supabase. Sin ellas, las imágenes se guardan en la tabla `archivos_almacenados` de PostgreSQL (migración `20261112100000_archivos_almacenados`) y la API las sirve desde `GET /api/archivos/:id`; así funcionan en Render sin configurar nada más. Los pasos siguientes son solo para usar Supabase.
 
 1. En el panel de Supabase abre **Storage** y crea un bucket llamado `catalogo` marcado como **público** (las imágenes se sirven por su URL pública; las escrituras solo las hace el backend con la llave de servicio).
 2. Copia la URL del proyecto en `SUPABASE_URL` (`https://<proyecto>.supabase.co`) y la llave `service_role` en `SUPABASE_SERVICE_ROLE_KEY` (Project Settings > API). Esta llave salta las políticas de seguridad: solo va en el backend, nunca en el frontend ni en GitHub. Si usas otro nombre de bucket, defínelo en `SUPABASE_STORAGE_BUCKET`.
@@ -175,14 +178,27 @@ Por ejemplo, en Render crea **New → Web Service**, conecta `cindy1204/proyecto
      -F image=@archivo.png
    ```
 
-   La respuesta 201 trae `imageUrl` con la URL pública del archivo en el bucket. Sin las variables de Supabase la API responde 503 `IMAGE_STORAGE_NOT_CONFIGURED`.
+   La respuesta 201 trae `imageUrl` con la URL pública del archivo en el bucket. Sin las variables de Supabase, `imageUrl` es relativa (`/api/archivos/<id>`) y apunta a la imagen guardada en la base de datos.
+
+## Reglas de validación de los formularios
+
+Las reglas viven en `src/application/interaction-data.ts` y se aplican a `data` en crear y editar. El frontend aplica las mismas reglas antes de enviar (`src/features/interactions/domain/`); aquí es donde se hacen cumplir. Un cuerpo que las incumple responde 400 `VALIDATION_ERROR` con el campo en `details`.
+
+- **Montos y tasas:** decimales con punto, sin signo, sin punto final (`1.`) y sin notación científica. Los montos son mayores que cero, con hasta 15 cifras enteras y 2 decimales (los ceros a la izquierda no cuentan); las tasas son mayores que cero, con hasta 6 decimales. `valorFob`, `valorReintegrado`, `totalValorFob`, `totalGastosExportacion` y `deducciones` admiten cero.
+- **Total en dólares = valor × tasa (provisional):** el total debe coincidir con `valorMonedaNegociacion × tasa` (`tipoCambioDolar` en importaciones, `tasaCambioDolares` en exportaciones y declaraciones), redondeado a centavos con mitad hacia arriba y con una tolerancia de un centavo. Ver la pregunta abierta sobre la dirección de la tasa en _Limitaciones conocidas_.
+- **Fechas:** `fechaTramite` no puede ser futura según la hora de Bogotá (`America/Bogota`) y debe existir (p. ej. `2026-02-30` se rechaza).
+- **Monedas:** solo códigos ISO 4217 vigentes de la lista del código (sin fondos, metales, `XXX` ni monedas retiradas). La comparación distingue mayúsculas.
+- **Identificación según el tipo:** NIT de 6 a 10 dígitos con dígito de verificación obligatorio (`-` y un dígito, validado con el algoritmo de la DIAN); cédula de ciudadanía, 6 a 10 dígitos; cédula de extranjería, 6 a 20 alfanuméricos; pasaporte, 5 a 20 alfanuméricos. Las longitudes de cédula y pasaporte son aproximadas y no están tomadas de un anexo oficial.
+- **Campos desconocidos:** los formularios son estrictos; un campo que no pertenece a la familia de la interacción responde 400.
 
 ## Limitaciones conocidas
 
+- **Dirección de la tasa sin confirmar:** la API valida `total = valor × tasa`, que es la convención de estos formularios. Si la tasa es un TRM en pesos por dólar, el cálculo correcto sería `valor / tasa` y la validación rechazaría datos correctos. Hay que confirmarlo antes de usar datos reales.
+- **Registros existentes:** un registro guardado antes de estas reglas, con una moneda no vigente o un total que no cumple valor × tasa, falla al editarse hasta que se corrige.
 - **Proxy de confianza:** la API declara `trust proxy 1` para leer la IP del cliente que reenvía el proxy (Render) en los límites de peticiones. Si se despliega detrás de más de un proxy, ajusta ese valor; con uno solo, el riesgo de falsear la IP es bajo.
 - **Límites por proceso:** los contadores de `express-rate-limit` viven en memoria. Con varias instancias, cada una cuenta por separado.
 - **Imagen opcional:** al crear un numeral la imagen es opcional. El soporte de subida existe; no se exige una imagen por numeral.
-- **Almacenamiento no verificado con credenciales reales:** la subida a Supabase Storage está implementada y cubierta con un almacenamiento simulado, pero no se probó con un proyecto de Supabase real.
+- **Almacenamiento no verificado con credenciales reales:** la subida a Supabase Storage y el fallback en PostgreSQL (`archivos_almacenados`) están implementados y cubiertos con almacenamiento simulado; no se probaron con un proyecto de Supabase real ni con la base de Render.
 - **Despliegue pendiente:** las URLs y el proyecto de Supabase de la tabla de enlaces están por confirmar.
 
 ## Uso de inteligencia artificial
