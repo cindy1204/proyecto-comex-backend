@@ -7,6 +7,7 @@ import type { Container } from './container.js';
 import { errorHandler, notFound } from './middlewares/error.handler.js';
 import { createRateLimiters, DEFAULT_RATE_LIMITS, type RateLimits } from './middlewares/rate-limit.middleware.js';
 import { createAuthRouter } from './routers/auth.router.js';
+import { createDocsRouter } from './docs/docs.router.js';
 import { createCatalogRouter } from './routers/catalog.router.js';
 import { createContactRouter } from './routers/contact.router.js';
 import { createInteractionsRouter } from './routers/interactions.router.js';
@@ -24,6 +25,8 @@ export function createApp(container: Container, options: AppOptions): Express {
 
   app.disable('x-powered-by');
   app.set('trust proxy', 1);
+  // Antes de helmet: Swagger UI usa scripts en línea (ver docs.router.ts).
+  app.use('/api/docs', createDocsRouter());
   app.use(helmet());
   app.use(
     cors({

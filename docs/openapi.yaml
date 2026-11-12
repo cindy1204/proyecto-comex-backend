@@ -1,0 +1,1430 @@
+openapi: 3.1.0
+info:
+  title: API de ColComex
+  version: 1.0.0
+  summary: API REST de comercio exterior con catálogo cambiario, formularios y solicitudes de contacto.
+  description: |
+    Expone el catálogo de numerales cambiarios, las interacciones (formularios de importación,
+    exportación, servicios, inversiones y endeudamiento) y las solicitudes de contacto.
+
+    **Autenticación.** Las rutas protegidas exigen `Authorization: Bearer <token>`. El token es un
+    JWT firmado con HS256 que se obtiene en `POST /api/auth/login` o `POST /api/auth/register`.
+    Dura `expiresIn` segundos. Un token ausente, mal formado o inválido responde 401.
+
+    **Formato de respuesta.** Los éxitos con cuerpo usan `{ "data": ... }`. Los listados añaden
+    `pagination`. Los errores usan `{ "error": { "code", "message", "details"? } }` y nunca exponen
+    trazas. Los borrados responden 204 sin cuerpo. Un origen de navegador no permitido responde 403
+    `CORS_ORIGIN_DENIED`.
+
+    **Borrado lógico.** Catálogo, interacciones y solicitudes se marcan como `REMOVED` (con
+    `deletedAt`) y dejan de aparecer en las consultas normales. Solo las imágenes se borran de forma
+    física.
+
+    **PUT y PATCH** son equivalentes: ambos aceptan una actualización parcial con al menos un campo.
+servers:
+  - url: https://proyecto-comex-backend.onrender.com
+    description: Producción (Render)
+  - url: http://localhost:3001
+    description: Desarrollo local
+tags:
+  - name: Salud
+    description: Estado del servicio y de la base de datos.
+  - name: Autenticación
+    description: Registro, inicio de sesión y alta de administradores.
+  - name: Catálogo
+    description: Numerales cambiarios. La lectura es pública; la escritura es solo de administradores.
+  - name: Archivos
+    description: Imágenes guardadas en la base de datos cuando Supabase Storage no está configurado.
+  - name: Interacciones
+    description: Formularios y declaraciones de cambio del usuario autenticado.
+  - name: Solicitudes de contacto
+    description: Solicitudes de asesoría. Pueden enviarse sin cuenta.
+security: []
+
+paths:
+  /health:
+    get:
+      tags: [Salud]
+      summary: Comprobar que la API y la base de datos responden
+      operationId: getHealth
+      responses:
+        '200':
+          description: Servicio disponible.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    const: ok
+              example:
+                status: ok
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/auth/register:
+    post:
+      tags: [Autenticación]
+      summary: Registrar un usuario con rol USER
+      description: El registro público siempre crea usuarios con rol `USER`. Los administradores solo existen por el seed o por `POST /api/auth/admins`.
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Usuario creado y sesión iniciada.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AuthSession'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/auth/login:
+    post:
+      tags: [Autenticación]
+      summary: Iniciar sesión
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Sesión iniciada.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AuthSession'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: Credenciales inválidas. El mensaje no revela si el correo existe.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/auth/me:
+    get:
+      tags: [Autenticación]
+      summary: Obtener el usuario del token
+      operationId: getMe
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Usuario autenticado.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/auth/admins:
+    post:
+      tags: [Autenticación]
+      summary: Crear otro administrador
+      description: Solo un administrador puede crear administradores. La contraseña debe tener al menos 12 caracteres.
+      operationId: createAdmin
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminCreateRequest'
+      responses:
+        '201':
+          description: Administrador creado.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/catalogos:
+    get:
+      tags: [Catálogo]
+      summary: Listar numerales
+      description: |
+        Público. Sin token solo devuelve numerales `ACTIVE`. El parámetro `state` solo tiene efecto
+        para administradores: `REMOVED` o `ALL` permiten ver los eliminados.
+      operationId: listCatalogItems
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - name: category
+          in: query
+          description: Categoría exacta, por ejemplo `importaciones`.
+          schema:
+            type: string
+            maxLength: 80
+        - name: direction
+          in: query
+          schema:
+            $ref: '#/components/schemas/CatalogDirection'
+        - name: search
+          in: query
+          description: Texto de búsqueda.
+          schema:
+            type: string
+            maxLength: 200
+        - $ref: '#/components/parameters/CreatedFrom'
+        - $ref: '#/components/parameters/CreatedTo'
+        - name: state
+          in: query
+          description: Solo administradores. Por defecto, `ACTIVE`.
+          schema:
+            type: string
+            enum: [ACTIVE, REMOVED, ALL]
+      responses:
+        '200':
+          description: Página de numerales.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogItemPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    post:
+      tags: [Catálogo]
+      summary: Crear un numeral (con imagen opcional)
+      description: |
+        Solo administradores. Acepta JSON o `multipart/form-data`. La imagen se envía en el campo
+        `image` (JPG, PNG o WebP, máximo 5 MB, con comprobación de firma de bytes). Si el
+        almacenamiento no está configurado, una petición con imagen responde 503
+        (`IMAGE_STORAGE_NOT_CONFIGURED`) y no crea el numeral. Si la subida falla, responde 502
+        (`IMAGE_UPLOAD_FAILED`) y tampoco lo crea.
+
+        Un duplicado es la combinación `category` + `direction` + `code` y responde 409.
+      operationId: createCatalogItem
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogWriteFields'
+          multipart/form-data:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/CatalogWriteFields'
+                - $ref: '#/components/schemas/ImageUpload'
+      responses:
+        '201':
+          description: Numeral creado.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CatalogItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/catalogos/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Catálogo]
+      summary: Obtener un numeral
+      description: Público. Los numerales eliminados solo los ve un administrador con token.
+      operationId: getCatalogItem
+      responses:
+        '200':
+          description: Numeral encontrado.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CatalogItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Catálogo]
+      summary: Actualizar un numeral (parcial)
+      description: |
+        Solo administradores. Envía los campos que cambian (al menos uno). Con `state: "ACTIVE"`
+        se restaura un numeral eliminado. Si se envía una imagen nueva, se sube primero y después
+        se borra la anterior del almacenamiento.
+      operationId: updateCatalogItem
+      security:
+        - bearerAuth: []
+      requestBody:
+        $ref: '#/components/requestBodies/CatalogUpdate'
+      responses:
+        '200':
+          description: Numeral actualizado.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CatalogItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    patch:
+      tags: [Catálogo]
+      summary: Actualizar un numeral (parcial)
+      description: Equivalente a PUT.
+      operationId: patchCatalogItem
+      security:
+        - bearerAuth: []
+      requestBody:
+        $ref: '#/components/requestBodies/CatalogUpdate'
+      responses:
+        '200':
+          description: Numeral actualizado.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CatalogItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    delete:
+      tags: [Catálogo]
+      summary: Eliminar un numeral (borrado lógico)
+      description: Solo administradores. Pasa el numeral a `REMOVED`, purga su imagen y lo deja sin `imageUrl`. Si ya estaba eliminado responde 404.
+      operationId: deleteCatalogItem
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Numeral eliminado.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/archivos/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Archivos]
+      summary: Obtener una imagen guardada en la base de datos
+      description: Público. Responde el binario con su `Content-Type` y caché de un día. Solo se usa cuando Supabase Storage no está configurado; `imageUrl` apunta aquí.
+      operationId: getStoredFile
+      responses:
+        '200':
+          description: Imagen.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                example: public, max-age=86400
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/interacciones:
+    get:
+      tags: [Interacciones]
+      summary: Listar todas las interacciones (administrador)
+      operationId: listAllInteractions
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/InteractionType'
+        - name: userId
+          in: query
+          description: Id del usuario dueño de los registros.
+          schema:
+            type: string
+        - $ref: '#/components/parameters/CreatedFrom'
+        - $ref: '#/components/parameters/CreatedTo'
+      responses:
+        '200':
+          description: Página de interacciones, con el usuario de cada una.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InteractionPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Interacciones]
+      summary: Crear una interacción
+      description: |
+        Requiere sesión. El numeral cambiario se toma de `data.numeralCambiario` y debe existir como
+        numeral activo de la categoría que corresponde al tipo. El contenido de `data` depende de
+        `type`; ver `InteractionData`.
+      operationId: createInteraction
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InteractionWrite'
+      responses:
+        '201':
+          description: Interacción creada.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Interaction'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+
+  /api/interacciones/mias:
+    get:
+      tags: [Interacciones]
+      summary: Listar mis interacciones
+      operationId: listMyInteractions
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/InteractionType'
+        - $ref: '#/components/parameters/CreatedFrom'
+        - $ref: '#/components/parameters/CreatedTo'
+      responses:
+        '200':
+          description: Página con las interacciones del usuario.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InteractionPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/interacciones/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Interacciones]
+      summary: Obtener una interacción
+      description: Propietario o administrador. Una interacción ajena responde 404, no 403.
+      operationId: getInteraction
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Interacción.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Interaction'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Interacciones]
+      summary: Actualizar una interacción (parcial)
+      description: |
+        Propietario o administrador. Envía solo los campos que cambian; `data` se combina con los
+        datos existentes. Si cambia `type` o el numeral, el numeral debe ser activo y de la categoría
+        del tipo resultante. Una interacción ajena responde 404.
+      operationId: updateInteraction
+      security:
+        - bearerAuth: []
+      requestBody:
+        $ref: '#/components/requestBodies/InteractionUpdate'
+      responses:
+        '200':
+          description: Interacción actualizada.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Interaction'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+    patch:
+      tags: [Interacciones]
+      summary: Actualizar una interacción (parcial)
+      description: Equivalente a PUT.
+      operationId: patchInteraction
+      security:
+        - bearerAuth: []
+      requestBody:
+        $ref: '#/components/requestBodies/InteractionUpdate'
+      responses:
+        '200':
+          description: Interacción actualizada.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Interaction'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+    delete:
+      tags: [Interacciones]
+      summary: Eliminar una interacción (borrado lógico)
+      description: Propietario o administrador. Pasa la interacción a `REMOVED`.
+      operationId: deleteInteraction
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Interacción eliminada.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/solicitudes-contacto:
+    get:
+      tags: [Solicitudes de contacto]
+      summary: Listar todas las solicitudes (administrador)
+      operationId: listAllContactRequests
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - name: tipoProducto
+          in: query
+          schema:
+            $ref: '#/components/schemas/ContactProductType'
+        - name: search
+          in: query
+          description: Texto de búsqueda.
+          schema:
+            type: string
+            maxLength: 200
+        - $ref: '#/components/parameters/CreatedFrom'
+        - $ref: '#/components/parameters/CreatedTo'
+      responses:
+        '200':
+          description: Página de solicitudes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactRequestPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Solicitudes de contacto]
+      summary: Enviar una solicitud de asesoría
+      description: |
+        Público. Sin token, la solicitud no queda asociada a ninguna cuenta. Con un token válido
+        queda asociada al usuario. Un token inválido responde 401 aunque el resto sea correcto.
+      operationId: createContactRequest
+      security:
+        - {}
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactWrite'
+      responses:
+        '201':
+          description: Solicitud creada.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ContactRequest'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/solicitudes-contacto/mias:
+    get:
+      tags: [Solicitudes de contacto]
+      summary: Listar mis solicitudes
+      operationId: listMyContactRequests
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/CreatedFrom'
+        - $ref: '#/components/parameters/CreatedTo'
+      responses:
+        '200':
+          description: Página con las solicitudes del usuario.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactRequestPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/solicitudes-contacto/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Solicitudes de contacto]
+      summary: Obtener una solicitud
+      description: Propietario o administrador.
+      operationId: getContactRequest
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Solicitud.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ContactRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Solicitudes de contacto]
+      summary: Actualizar una solicitud (parcial)
+      description: Propietario o administrador.
+      operationId: updateContactRequest
+      security:
+        - bearerAuth: []
+      requestBody:
+        $ref: '#/components/requestBodies/ContactUpdate'
+      responses:
+        '200':
+          description: Solicitud actualizada.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ContactRequest'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Solicitudes de contacto]
+      summary: Actualizar una solicitud (parcial)
+      description: Equivalente a PUT.
+      operationId: patchContactRequest
+      security:
+        - bearerAuth: []
+      requestBody:
+        $ref: '#/components/requestBodies/ContactUpdate'
+      responses:
+        '200':
+          description: Solicitud actualizada.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ContactRequest'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Solicitudes de contacto]
+      summary: Eliminar una solicitud (borrado lógico)
+      description: Propietario o administrador.
+      operationId: deleteContactRequest
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Solicitud eliminada.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token obtenido con `POST /api/auth/login` o `POST /api/auth/register`.
+
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      description: Identificador cuid. Un id con formato inválido responde 400.
+      schema:
+        type: string
+    Page:
+      name: page
+      in: query
+      description: Número de página, desde 1.
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Limit:
+      name: limit
+      in: query
+      description: Registros por página.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 50
+        default: 10
+    CreatedFrom:
+      name: createdFrom
+      in: query
+      description: Fecha mínima de creación (ISO 8601, con fecha o con fecha y hora).
+      schema:
+        type: string
+        format: date-time
+    CreatedTo:
+      name: createdTo
+      in: query
+      description: Fecha máxima de creación. Si se envía solo la fecha, incluye el día completo.
+      schema:
+        type: string
+        format: date-time
+
+  requestBodies:
+    CatalogUpdate:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CatalogUpdateRequest'
+        multipart/form-data:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/CatalogUpdateRequest'
+              - $ref: '#/components/schemas/ImageUpload'
+    InteractionUpdate:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/InteractionUpdateRequest'
+    ContactUpdate:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ContactUpdateRequest'
+
+  responses:
+    BadRequest:
+      description: Validación fallida, JSON mal formado o id inválido. `details` indica el campo.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: VALIDATION_ERROR
+              message: Revisa los datos enviados.
+              details:
+                - field: email
+                  message: Ingresa un correo electrónico válido.
+    Unauthorized:
+      description: Falta el token, tiene un formato incorrecto o no es válido.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: El usuario no tiene el rol necesario.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: No existe, está eliminado o pertenece a otro usuario.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Conflict:
+      description: Duplicado o referencia en conflicto.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    PayloadTooLarge:
+      description: Cuerpo mayor a 1 MB, o imagen mayor a 5 MB.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    UnsupportedMediaType:
+      description: La imagen no es JPG, PNG ni WebP.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    TooManyRequests:
+      description: Se superó el límite de peticiones. Ver "Límites" en el README.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    BadGateway:
+      description: Falló la subida de la imagen al almacenamiento. El numeral no se crea ni se modifica.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ServiceUnavailable:
+      description: |
+        El servicio no está disponible. En `/health`, la base de datos no responde (`SERVICE_UNAVAILABLE`).
+        Al subir una imagen, el almacenamiento no está configurado (`IMAGE_STORAGE_NOT_CONFIGURED`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              examples:
+                [
+                  VALIDATION_ERROR,
+                  INVALID_JSON,
+                  NOT_FOUND,
+                  CONFLICT,
+                  PAYLOAD_TOO_LARGE,
+                  UNSUPPORTED_MEDIA_TYPE,
+                  IMAGE_STORAGE_NOT_CONFIGURED,
+                  IMAGE_UPLOAD_FAILED,
+                  CORS_ORIGIN_DENIED,
+                ]
+            message:
+              type: string
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                  message:
+                    type: string
+
+    Pagination:
+      type: object
+      required: [total, currentPage, limit, totalPages]
+      properties:
+        total:
+          type: integer
+        currentPage:
+          type: integer
+        limit:
+          type: integer
+        totalPages:
+          type: integer
+
+    Role:
+      type: string
+      enum: [ADMIN, USER]
+
+    RecordState:
+      type: string
+      enum: [ACTIVE, REMOVED]
+
+    User:
+      type: object
+      required: [id, name, email, role, createdAt]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          $ref: '#/components/schemas/Role'
+        createdAt:
+          type: string
+          format: date-time
+
+    AuthSession:
+      type: object
+      required: [user, token, expiresIn]
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        token:
+          type: string
+          description: 'JWT firmado con HS256. Enviarlo como `Authorization: Bearer <token>`.'
+        expiresIn:
+          type: integer
+          description: Vigencia del token en segundos.
+
+    RegisterRequest:
+      type: object
+      required: [name, email, password]
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          minLength: 8
+          maxLength: 72
+          description: Mínimo 8 caracteres y máximo 72 bytes (límite de bcrypt).
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 1
+          maxLength: 1024
+
+    AdminCreateRequest:
+      type: object
+      required: [name, email, password]
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          minLength: 12
+
+    CatalogDirection:
+      type: string
+      enum: [INGRESOS, EGRESOS]
+      description: Ingreso o egreso de divisas.
+
+    CatalogItem:
+      type: object
+      required: [id, category, direction, code, title, description, note, imageUrl, state, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        category:
+          type: string
+          example: importaciones
+        direction:
+          $ref: '#/components/schemas/CatalogDirection'
+        code:
+          type: string
+          example: '2010'
+        title:
+          type: string
+        description:
+          type: string
+        note:
+          type: [string, 'null']
+        imageUrl:
+          type: [string, 'null']
+          description: URL absoluta de Supabase Storage, o ruta relativa `/api/archivos/<id>` cuando la imagen está en la base de datos.
+        state:
+          $ref: '#/components/schemas/RecordState'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CatalogItemPage:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogItem'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    CatalogWriteFields:
+      type: object
+      required: [category, direction, code, title, description]
+      additionalProperties: false
+      properties:
+        category:
+          type: string
+          minLength: 1
+          maxLength: 80
+        direction:
+          $ref: '#/components/schemas/CatalogDirection'
+        code:
+          type: string
+          minLength: 1
+          maxLength: 40
+        title:
+          type: string
+          minLength: 1
+          maxLength: 250
+        description:
+          type: string
+          minLength: 1
+          maxLength: 10000
+        note:
+          type: string
+          maxLength: 10000
+          description: En multipart, una nota vacía equivale a no tener nota.
+
+    ImageUpload:
+      type: object
+      properties:
+        image:
+          type: string
+          format: binary
+          description: JPG, PNG o WebP de hasta 5 MB. Se valida el tipo declarado y la firma de bytes.
+
+    CatalogUpdateRequest:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      description: Al menos un campo. `state` solo acepta `ACTIVE` (restaurar).
+      properties:
+        category:
+          type: string
+          minLength: 1
+          maxLength: 80
+        direction:
+          $ref: '#/components/schemas/CatalogDirection'
+        code:
+          type: string
+          minLength: 1
+          maxLength: 40
+        title:
+          type: string
+          minLength: 1
+          maxLength: 250
+        description:
+          type: string
+          minLength: 1
+          maxLength: 10000
+        note:
+          type: [string, 'null']
+          maxLength: 10000
+        state:
+          type: string
+          const: ACTIVE
+
+    InteractionType:
+      type: string
+      enum:
+        - formulario-importaciones
+        - formulario-exportaciones
+        - formulario-servicios
+        - formulario-inversiones
+        - formulario-endeudamiento
+
+    InteractionData:
+      type: object
+      description: |
+        Contenido del formulario. Su forma depende de `type` y se valida en
+        `src/application/interaction-data.ts`.
+
+        - `formulario-importaciones`: el numeral va en `numeralOperacion` (categoría `importaciones`).
+        - `formulario-exportaciones`, `formulario-servicios`, `formulario-inversiones` y
+          `formulario-endeudamiento`: el numeral va en `numeralCambiario` (categoría del tipo).
+
+        El numeral debe existir como numeral activo de esa categoría. Las declaraciones de servicios,
+        inversiones y endeudamiento usan un contrato estricto: una clave no declarada responde 400.
+        Los montos son cadenas decimales, sin signo ni notación exponencial.
+      additionalProperties: true
+
+    InteractionWrite:
+      type: object
+      required: [type, data]
+      additionalProperties: false
+      properties:
+        type:
+          $ref: '#/components/schemas/InteractionType'
+        data:
+          $ref: '#/components/schemas/InteractionData'
+
+    InteractionUpdateRequest:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        type:
+          $ref: '#/components/schemas/InteractionType'
+        data:
+          $ref: '#/components/schemas/InteractionData'
+
+    Interaction:
+      type: object
+      required: [id, userId, catalogItemId, type, data, state, createdAt, updatedAt, catalogItem]
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        catalogItemId:
+          type: string
+        type:
+          $ref: '#/components/schemas/InteractionType'
+        data:
+          $ref: '#/components/schemas/InteractionData'
+        state:
+          $ref: '#/components/schemas/RecordState'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        user:
+          description: Solo se incluye para administradores.
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            email:
+              type: string
+              format: email
+        catalogItem:
+          type: object
+          properties:
+            id:
+              type: string
+            category:
+              type: string
+            code:
+              type: string
+            title:
+              type: string
+
+    InteractionPage:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Interaction'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    ContactProductType:
+      type: string
+      enum: [importaciones, exportaciones, deudaExterna, inversiones, servicios]
+
+    ContactWrite:
+      type: object
+      required: [nombreCompleto, email, tipoProducto, descripcionCaso]
+      additionalProperties: false
+      properties:
+        nombreCompleto:
+          type: string
+          minLength: 2
+          maxLength: 120
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        empresa:
+          type: [string, 'null']
+          maxLength: 160
+        telefono:
+          type: [string, 'null']
+          maxLength: 40
+        tipoProducto:
+          $ref: '#/components/schemas/ContactProductType'
+        descripcionCaso:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        montoEstimado:
+          description: Monto en USD, mayor o igual a 0, con máximo 12 dígitos enteros y 2 decimales. Se conserva como cadena.
+          oneOf:
+            - type: number
+              minimum: 0
+            - type: string
+              pattern: '^\d{1,12}(\.\d{1,2})?$'
+            - type: 'null'
+
+    ContactUpdateRequest:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      description: Al menos un campo. Los mismos límites que en la creación.
+      properties:
+        nombreCompleto:
+          type: string
+          minLength: 2
+          maxLength: 120
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        empresa:
+          type: [string, 'null']
+          maxLength: 160
+        telefono:
+          type: [string, 'null']
+          maxLength: 40
+        tipoProducto:
+          $ref: '#/components/schemas/ContactProductType'
+        descripcionCaso:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        montoEstimado:
+          oneOf:
+            - type: number
+              minimum: 0
+            - type: string
+              pattern: '^\d{1,12}(\.\d{1,2})?$'
+            - type: 'null'
+
+    ContactRequest:
+      type: object
+      required: [id, nombreCompleto, email, tipoProducto, descripcionCaso, state, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        userId:
+          type: [string, 'null']
+          description: Nulo cuando la solicitud se envió sin cuenta.
+        nombreCompleto:
+          type: string
+        email:
+          type: string
+          format: email
+        empresa:
+          type: [string, 'null']
+        telefono:
+          type: [string, 'null']
+        tipoProducto:
+          $ref: '#/components/schemas/ContactProductType'
+        descripcionCaso:
+          type: string
+        montoEstimado:
+          type: [string, 'null']
+          example: '15000.00'
+        state:
+          $ref: '#/components/schemas/RecordState'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ContactRequestPage:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContactRequest'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
